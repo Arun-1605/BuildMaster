@@ -1,0 +1,558 @@
+/* Modern, Beautiful Contact Form */
+
+/* Modern, Beautiful Contact Form */
+.contact-form-container {
+  max-width: 600px;
+  margin: 1rem auto;
+  padding: 0;
+  background: transparent;
+}
+
+.form-card {
+  background: linear-gradient(to right bottom, #ffffff, #f7f9fc);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative elements */
+.form-card:before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  opacity: 0.2;
+  z-index: 0;
+}
+
+.form-card:after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  opacity: 0.2;
+  z-index: 0;
+}
+
+/* Modern title */
+.form-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-subtitle {
+  font-size: 0.85rem;
+  color: #718096;
+  margin-bottom: 1.25rem;
+}
+
+/* Row spacing */
+.row {
+  margin-bottom: 0.5rem;
+}
+
+/* Form controls with modern styling */
+.form-control, .form-select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: rgba(247, 250, 252, 0.8);
+  transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+  background-color: #fff;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.02em;
+}
+
+/* Error styling */
+.is-invalid {
+  border-color: #fc8181 !important;
+}
+
+.invalid-feedback {
+  font-size: 0.7rem;
+  color: #e53e3e;
+  margin-top: 0.25rem;
+}
+
+/* Textarea */
+textarea.form-control {
+  min-height: 70px;
+  resize: none;
+}
+
+/* Character count */
+.text-end {
+  text-align: right;
+}
+
+.text-muted {
+  font-size: 0.7rem;
+  color: #a0aec0;
+}
+
+/* Button styling */
+.btn {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.btn:hover:before {
+  left: 0;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  border: none;
+  box-shadow: 0 4px 6px rgba(66, 153, 225, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 14px rgba(66, 153, 225, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-secondary {
+  background-color: #edf2f7;
+  color: #4a5568;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+/* Button container */
+.d-flex {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.alert-success {
+  background-color: rgba(198, 246, 213, 0.6);
+  border: 1px solid #68d391;
+  color: #2f855a;
+}
+
+.alert-danger {
+  background-color: rgba(254, 215, 215, 0.6);
+  border: 1px solid #fc8181;
+  color: #c53030;
+}
+
+.alert-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Override Bootstrap columns for smaller layout */
+@media (min-width: 768px) {
+  .col-md-6 {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .d-flex {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  .form-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+}
+
+/* Loading Spinner with animation */
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+/* Add subtle animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-card {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.contact-form label {
+  transition: transform 0.2s, color 0.2s;
+}
+
+
+.d-none {
+  display: none !important;
+}
+
+.contact-form .form-control:focus + label,
+.contact-form .form-select:focus + label {
+  color: #3182ce;
+  transform: translateY(-2px);
+}
+
+.contact-form-container {
+  max-width: 600px;
+  margin: 1rem auto;
+  padding: 0;
+  background: transparent;
+}
+
+.form-card {
+  background: linear-gradient(to right bottom, #ffffff, #f7f9fc);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative elements */
+.form-card:before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  opacity: 0.2;
+  z-index: 0;
+}
+
+.form-card:after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: -50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  opacity: 0.2;
+  z-index: 0;
+}
+
+/* Modern title */
+.form-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-subtitle {
+  font-size: 0.85rem;
+  color: #718096;
+  margin-bottom: 1.25rem;
+}
+
+/* Row spacing */
+.row {
+  margin-bottom: 0.5rem;
+}
+
+/* Form controls with modern styling */
+.form-control, .form-select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: rgba(247, 250, 252, 0.8);
+  transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+  background-color: #fff;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.02em;
+}
+
+/* Error styling */
+.is-invalid {
+  border-color: #fc8181 !important;
+}
+
+.invalid-feedback {
+  font-size: 0.7rem;
+  color: #e53e3e;
+  margin-top: 0.25rem;
+}
+
+/* Textarea */
+textarea.form-control {
+  min-height: 70px;
+  resize: none;
+}
+
+/* Character count */
+.text-end {
+  text-align: right;
+}
+
+.text-muted {
+  font-size: 0.7rem;
+  color: #a0aec0;
+}
+
+/* Button styling */
+.btn {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.btn:hover:before {
+  left: 0;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #4299e1, #667eea);
+  border: none;
+  box-shadow: 0 4px 6px rgba(66, 153, 225, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 14px rgba(66, 153, 225, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-secondary {
+  background-color: #edf2f7;
+  color: #4a5568;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+/* Button container */
+.d-flex {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.alert-success {
+  background-color: rgba(198, 246, 213, 0.6);
+  border: 1px solid #68d391;
+  color: #2f855a;
+}
+
+.alert-danger {
+  background-color: rgba(254, 215, 215, 0.6);
+  border: 1px solid #fc8181;
+  color: #c53030;
+}
+
+.alert-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Override Bootstrap columns for smaller layout */
+@media (min-width: 768px) {
+  .col-md-6 {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .d-flex {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  .form-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+}
+
+/* Loading Spinner with animation */
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+/* Add subtle animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-card {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.contact-form label {
+  transition: transform 0.2s, color 0.2s;
+}
+
+.contact-form .form-control:focus + label,
+.contact-form .form-select:focus + label {
+  color: #3182ce;
+  transform: translateY(-2px);
+}
+
+.btn-close {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #4a5568;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+}
+.btn-close:hover {
+  color: #e53e3e;
+  transform: scale(1.1);
+}
+
+@media (max-width: 576px) {
+  .d-flex {
+    flex-direction: column;
+  }
+  .btn {
+    width: 100%;
+  }
+}

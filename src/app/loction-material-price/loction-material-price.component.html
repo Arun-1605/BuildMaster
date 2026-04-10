@@ -1,0 +1,191 @@
+<div class="full-page-form-container">
+  <div class="content-wrapper">
+    <div class="form-header">
+      <h1 class="form-title">Enter Material Price for Location</h1>
+      <p class="form-subtitle">Fill in the details to add new material pricing</p>
+    </div>
+    <div class="form-card">
+      <form [formGroup]="priceForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <!-- Country VLookup -->
+          <div class="form-group vlookup-group">
+            <label for="country">Country</label>
+            <div class="vlookup-input-wrapper">
+              <input
+                id="country"
+                type="text"
+                class="form-control"
+                [value]="selectedCountryName"
+                #countryInput
+                (input)="onCountryInput(countryInput.value)"
+                placeholder="Type or choose country"
+                autocomplete="off"
+              />
+              <button type="button" class="vlookup-btn" (click)="openCountryLookup()">
+                <span class="vlookup-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.5 12a5.5 5.5 0 1 1 4.473-2.473l3.387 3.387a1 1 0 0 1-1.414 1.414l-3.387-3.387A5.478 5.478 0 0 1 6.5 12zm0-1A4.5 4.5 0 1 0 6.5 2a4.5 4.5 0 0 0 0 9z"/>
+                  </svg>
+                </span>
+              </button>
+              <ul class="vlookup-dropdown" *ngIf="showCountryDropdown">
+                <li *ngIf="filteredCountries.length === 0">No matches found</li>
+                <li *ngFor="let country of filteredCountries" (click)="selectCountry(country)">
+                  {{ country.name }}
+                </li>
+              </ul>
+            </div>
+            <div class="error-message" *ngIf="hasError('country', 'required')">
+              Country is required.
+            </div>
+          </div>
+
+          <!-- State VLookup -->
+          <div class="form-group vlookup-group">
+            <label for="state">State</label>
+            <div class="vlookup-input-wrapper">
+              <input
+                id="state"
+                type="text"
+                class="form-control"
+                [value]="selectedStateName"
+                #stateInput
+                (input)="onStateInput(stateInput.value)"
+                placeholder="Type or choose state"
+                autocomplete="off"
+                [disabled]="!priceForm.get('country')?.value"
+              />
+              <button type="button" class="vlookup-btn" (click)="openStateLookup()" [disabled]="!priceForm.get('country')?.value">
+                <span class="vlookup-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.5 12a5.5 5.5 0 1 1 4.473-2.473l3.387 3.387a1 1 0 0 1-1.414 1.414l-3.387-3.387A5.478 5.478 0 0 1 6.5 12zm0-1A4.5 4.5 0 1 0 6.5 2a4.5 4.5 0 0 0 0 9z"/>
+                  </svg>
+                </span>
+              </button>
+              <ul class="vlookup-dropdown" *ngIf="showStateDropdown">
+                <li *ngIf="filteredStates.length === 0">No matches found</li>
+                <li *ngFor="let state of filteredStates" (click)="selectState(state)">
+                  {{ state.name }}
+                </li>
+              </ul>
+            </div>
+            <div class="error-message" *ngIf="hasError('state', 'required')">
+              State is required.
+            </div>
+          </div>
+
+          <!-- District VLookup -->
+          <div class="form-group vlookup-group">
+            <label for="district">District</label>
+            <div class="vlookup-input-wrapper">
+              <input
+                id="district"
+                type="text"
+                class="form-control"
+                [value]="selectedDistrictName"
+                #districtInput
+                (input)="onDistrictInput(districtInput.value)"
+                placeholder="Type or choose district"
+                autocomplete="off"
+                [disabled]="!priceForm.get('state')?.value"
+              />
+              <button type="button" class="vlookup-btn" (click)="openDistrictLookup()" [disabled]="!priceForm.get('state')?.value">
+                <span class="vlookup-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.5 12a5.5 5.5 0 1 1 4.473-2.473l3.387 3.387a1 1 0 0 1-1.414 1.414l-3.387-3.387A5.478 5.478 0 0 1 6.5 12zm0-1A4.5 4.5 0 1 0 6.5 2a4.5 4.5 0 0 0 0 9z"/>
+                  </svg>
+                </span>
+              </button>
+              <ul class="vlookup-dropdown" *ngIf="showDistrictDropdown">
+                <li *ngIf="filteredDistricts.length === 0">No matches found</li>
+                <li *ngFor="let district of filteredDistricts" (click)="selectDistrict(district)">
+                  {{ district.name }}
+                </li>
+              </ul>
+            </div>
+            <div class="error-message" *ngIf="hasError('district', 'required')">
+              District is required.
+            </div>
+          </div>
+
+          <!-- Material VLookup -->
+          <div class="form-group vlookup-group">
+            <label for="material">Material</label>
+            <div class="vlookup-input-wrapper">
+              <input
+                id="material"
+                type="text"
+                class="form-control"
+                [value]="selectedMaterialName"
+                #materialInput
+                (input)="onMaterialInput(materialInput.value)"
+                placeholder="Type or choose material"
+                autocomplete="off"
+              />
+              <button type="button" class="vlookup-btn" (click)="openMaterialLookup()">
+                <span class="vlookup-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.5 12a5.5 5.5 0 1 1 4.473-2.473l3.387 3.387a1 1 0 0 1-1.414 1.414l-3.387-3.387A5.478 5.478 0 0 1 6.5 12zm0-1A4.5 4.5 0 1 0 6.5 2a4.5 4.5 0 0 0 0 9z"/>
+                  </svg>
+                </span>
+              </button>
+              <ul class="vlookup-dropdown" *ngIf="showMaterialDropdown">
+                <li *ngIf="filteredMaterials.length === 0">No matches found</li>
+                <li *ngFor="let material of filteredMaterials" (click)="selectMaterial(material)">
+                  {{ material.materialName }}
+                </li>
+              </ul>
+            </div>
+            <div class="error-message" *ngIf="hasError('material', 'required')">
+              Material is required.
+            </div>
+          </div>
+
+          <!-- Price Date -->
+          <div class="form-group">
+            <label for="priceDate">Price Date</label>
+            <input
+              id="priceDate"
+              type="date"
+              class="form-control"
+              formControlName="priceDate"
+            />
+            <div class="error-message" *ngIf="hasError('priceDate', 'required')">
+              Price date is required.
+            </div>
+          </div>
+
+          <!-- Price -->
+          <div class="form-group">
+            <label for="price">Price</label>
+            <div class="price-input-wrapper">
+              <span class="currency-symbol">₹</span>
+              <input
+                id="price"
+                type="number"
+                class="form-control price-input"
+                formControlName="price"
+                placeholder="Enter price"
+                min="0"
+              />
+            </div>
+            <div class="error-message" *ngIf="hasError('price', 'required')">
+              Price is required and must be positive.
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" (click)="priceForm.reset(); selectedCountryName = ''; selectedStateName = ''; selectedDistrictName = ''; selectedMaterialName = ''">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="priceForm.invalid">
+            <span class="btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
+              </svg>
+            </span>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

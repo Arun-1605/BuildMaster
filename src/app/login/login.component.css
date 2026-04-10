@@ -1,0 +1,129 @@
+/* Login Container */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    padding: 1rem;
+  }
+  
+  /* Login Card */
+  .login-card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  
+  /* Title and Subtitle */
+  .login-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+  }
+  
+  .login-subtitle {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Form Group */
+  .form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+  
+  .form-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f7fafc;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
+    background-color: #fff;
+  }
+  
+  /* Error Message */
+  .error-message {
+    font-size: 0.75rem;
+    color: #e53e3e;
+    margin-top: 0.25rem;
+  }
+  
+  /* Button */
+  .btn {
+    display: inline-block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+  }
+  
+  .btn:hover {
+    background: linear-gradient(135deg, #3182ce, #5a67d8);
+  }
+  
+  /* Footer */
+  .login-footer {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: #718096;
+  }
+  
+  .login-footer a {
+    color: #4299e1;
+    text-decoration: none;
+  }
+  
+  .login-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* Secondary Button */
+.btn.secondary-btn {
+    background-color: #edf2f7;
+    color: #2d3748;
+    border: 1px solid #cbd5e0;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn.secondary-btn:hover {
+    background-color: #e2e8f0;
+    border-color: #a0aec0;
+  }

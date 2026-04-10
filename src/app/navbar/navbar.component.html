@@ -1,0 +1,74 @@
+<nav class="navbar" (click)="showBellMenu=false">
+  <div class="navbar-container">
+    <div class="navbar-logo">
+      <a routerLink="/" class="brand-name">🏗️ BuildMaster</a>
+    </div>
+
+    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
+      <span class="hamburger-icon" [class.open]="isMobileMenuOpen">
+        <span></span><span></span><span></span>
+      </span>
+    </button>
+
+    <ul class="navbar-links" [class.open]="isMobileMenuOpen">
+      <li><a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a></li>
+
+      <ng-container *ngIf="isLoggedIn">
+        <li><a routerLink="/projects" routerLinkActive="active">📋 Projects</a></li>
+        <li><a routerLink="/floor-plan" routerLinkActive="active">📐 Plans</a></li>
+        <li><a routerLink="/supplier-master" routerLinkActive="active">🏭 Suppliers</a></li>
+        <li><a routerLink="/material-price-master" routerLinkActive="active">📦 Materials</a></li>
+        <li><a routerLink="/quotation" routerLinkActive="active">📨 Quotations</a></li>
+        <li><a routerLink="/risk-management" routerLinkActive="active">⚠️ Risk</a></li>
+        <li><a routerLink="/cost-estimation" routerLinkActive="active">💰 Estimation</a></li>
+        <li><a routerLink="/ai-assistant" routerLinkActive="active">🤖 AI</a></li>
+        <li *ngIf="isOwner"><a routerLink="/admin" routerLinkActive="active" class="admin-link">⚙️ Admin</a></li>
+        <li>
+          <a *ngIf="isPremium" routerLink="/subscription" class="tier-badge premium" title="Premium Active">
+            ⭐ Premium
+          </a>
+          <a *ngIf="!isPremium && !isOwner" routerLink="/subscription" class="tier-badge free" title="Upgrade to Premium">
+            🔓 Upgrade
+          </a>
+        </li>
+        <!-- Notification Bell -->
+        <li class="bell-wrap" *ngIf="isLoggedIn">
+          <button class="bell-btn" (click)="toggleBell()" title="Notifications">
+            🔔
+            <span *ngIf="unreadCount > 0" class="bell-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </button>
+          <div class="bell-dropdown" *ngIf="showBellMenu" (click)="$event.stopPropagation()">
+            <div class="bell-top">
+              <span>Notifications</span>
+              <button class="bell-mark-read" (click)="markAllRead()" *ngIf="unreadCount > 0">Mark all read</button>
+            </div>
+            <div *ngIf="notifLoading" class="bell-loading">Loading...</div>
+            <div *ngIf="!notifLoading && notifications.length === 0" class="bell-empty">No notifications</div>
+            <div *ngFor="let n of notifications" class="bell-notif" [class.unread]="!n.isRead" (click)="goNotif(n)">
+              <span class="bell-notif-icon">{{ notifIcon(n.type) }}</span>
+              <div class="bell-notif-body">
+                <div class="bell-notif-title">{{ n.title }}</div>
+                <div class="bell-notif-msg">{{ n.message }}</div>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <button class="logout-btn" (click)="logout()">Logout</button>
+        </li>
+      </ng-container>
+
+      <ng-container *ngIf="!isLoggedIn">
+        <li><a routerLink="/supplier-portal" routerLinkActive="active" class="supplier-portal-link">Supplier Portal</a></li>
+        <li><a href="javascript:void(0)" (click)="openContactForm()" class="contact-link">Contact</a></li>
+        <li><a routerLink="/login" class="login-btn">Login</a></li>
+      </ng-container>
+    </ul>
+  </div>
+</nav>
+
+<div *ngIf="showContactForm" class="popup-overlay" (click)="closeContactForm()">
+  <div class="popup-content" (click)="$event.stopPropagation()">
+    <app-contact-form (close)="closeContactForm()"></app-contact-form>
+  </div>
+</div>

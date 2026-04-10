@@ -1,0 +1,277 @@
+<div class="mpm-page">
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <div class="mpm-header">
+    <div>
+      <h1 class="mpm-title">📦 Material Price Master</h1>
+      <p class="mpm-sub">Manage material prices by location (country / state / district)</p>
+    </div>
+    <button class="btn-primary" (click)="openAdd()">+ Add Price Record</button>
+  </div>
+
+  <!-- ── Search bar ─────────────────────────────────── -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input
+        class="search-input"
+        type="text"
+        placeholder="Search material, state, district, country…"
+        [(ngModel)]="searchTerm"
+        (input)="filterItems()"
+      />
+    </div>
+    <span class="record-count">{{ rows.length }} record{{ rows.length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <!-- ── Loading / Error ─────────────────────────────── -->
+  <div *ngIf="loading" class="state-msg">Loading…</div>
+  <div *ngIf="loadError && !loading" class="state-msg error">
+    Failed to load records. <button class="btn-outline small" (click)="loadRows()">Retry</button>
+  </div>
+
+  <!-- ── Table ──────────────────────────────────────── -->
+  <div *ngIf="!loading && !loadError" class="table-wrap">
+    <table class="mpm-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="sortable" (click)="sort('materialName')">Material {{ sortIcon('materialName') }}</th>
+          <th class="sortable" (click)="sort('country')">Country {{ sortIcon('country') }}</th>
+          <th class="sortable" (click)="sort('stateName')">State {{ sortIcon('stateName') }}</th>
+          <th class="sortable" (click)="sort('districtName')">District {{ sortIcon('districtName') }}</th>
+          <th class="sortable num" (click)="sort('price')">Price {{ sortIcon('price') }}</th>
+          <th>Unit</th>
+          <th class="sortable" (click)="sort('pricedate')">Price Date {{ sortIcon('pricedate') }}</th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filteredRows; let i = index">
+          <td class="num">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+          <td><span class="material-badge">{{ row.materialName }}</span></td>
+          <td>{{ row.country }}</td>
+          <td>{{ row.stateName }}</td>
+          <td>{{ row.districtName }}</td>
+          <td class="num price-cell">₹ {{ row.price | number:'1.2-2' }}</td>
+          <td><span class="unit-tag">{{ row.unit || '—' }}</span></td>
+          <td>{{ fmtDate(row.pricedate) }}</td>
+          <td class="actions-col">
+            <button class="act-btn edit" (click)="openEdit(row)">✏️ Edit</button>
+            <button class="act-btn del"  (click)="askDelete(row)">🗑️ Delete</button>
+          </td>
+        </tr>
+        <tr *ngIf="filteredRows.length === 0">
+          <td colspan="9" class="empty-row">No records found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Pagination ──────────────────────────────────── -->
+  <div *ngIf="!loading && !loadError && totalPages > 1" class="pagination">
+    <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">‹</button>
+    <ng-container *ngFor="let p of pageNumbers()">
+      <span *ngIf="p === -1" class="page-ellipsis">…</span>
+      <button
+        *ngIf="p !== -1"
+        class="page-btn"
+        [class.active]="p === currentPage"
+        (click)="goToPage(p)"
+      >{{ p }}</button>
+    </ng-container>
+    <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">›</button>
+  </div>
+
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     Add / Edit Modal
+════════════════════════════════════════════════════ -->
+<div *ngIf="showModal" class="overlay" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>{{ editId ? 'Edit' : 'Add' }} Material Price Record</h2>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
+
+      <!-- Material -->
+      <div class="field-group lookup-field">
+        <label>Material <span class="req">*</span></label>
+        <div class="lookup-row">
+          <input
+            type="text"
+            placeholder="Search material…"
+            [value]="selectedMaterialName"
+            (input)="onMaterialInput($any($event.target).value)"
+            (focus)="openMaterialDd()"
+            [class.invalid]="err('material')"
+          />
+          <button type="button" class="lookup-btn" (click)="openMaterialDd()">▼</button>
+        </div>
+        <div *ngIf="showMaterialDd" class="dropdown">
+          <div
+            *ngFor="let m of filteredMaterials"
+            class="dd-item"
+            (mousedown)="selectMaterial(m)"
+          >
+            <strong>{{ m.materialName }}</strong>
+            <span class="dd-sub">{{ m.productGroup }}</span>
+          </div>
+          <div *ngIf="filteredMaterials.length === 0" class="dd-empty">No materials found</div>
+        </div>
+        <span *ngIf="err('material')" class="err-msg">Material is required</span>
+      </div>
+
+      <!-- Country -->
+      <div class="field-group lookup-field">
+        <label>Country <span class="req">*</span></label>
+        <div class="lookup-row">
+          <input
+            type="text"
+            placeholder="Search country…"
+            [value]="selectedCountryName"
+            (input)="onCountryInput($any($event.target).value)"
+            (focus)="openCountryDd()"
+            [class.invalid]="err('country')"
+          />
+          <button type="button" class="lookup-btn" (click)="openCountryDd()">▼</button>
+        </div>
+        <div *ngIf="showCountryDd" class="dropdown">
+          <div *ngFor="let c of filteredCountries" class="dd-item" (mousedown)="selectCountry(c)">{{ c.name }}</div>
+          <div *ngIf="filteredCountries.length === 0" class="dd-empty">No countries found</div>
+        </div>
+        <span *ngIf="err('country')" class="err-msg">Country is required</span>
+      </div>
+
+      <!-- State -->
+      <div class="field-group lookup-field">
+        <label>State <span class="req">*</span></label>
+        <div class="lookup-row">
+          <input
+            type="text"
+            placeholder="Select country first…"
+            [value]="selectedStateName"
+            (input)="onStateInput($any($event.target).value)"
+            (focus)="openStateDd()"
+            [disabled]="states.length === 0"
+            [class.invalid]="err('state')"
+          />
+          <button type="button" class="lookup-btn" (click)="openStateDd()" [disabled]="states.length === 0">▼</button>
+        </div>
+        <div *ngIf="showStateDd" class="dropdown">
+          <div *ngFor="let s of filteredStates" class="dd-item" (mousedown)="selectState(s)">{{ s.name }}</div>
+          <div *ngIf="filteredStates.length === 0" class="dd-empty">No states found</div>
+        </div>
+        <span *ngIf="err('state')" class="err-msg">State is required</span>
+      </div>
+
+      <!-- District -->
+      <div class="field-group lookup-field">
+        <label>District <span class="req">*</span></label>
+        <div class="lookup-row">
+          <input
+            type="text"
+            placeholder="Select state first…"
+            [value]="selectedDistrictName"
+            (input)="onDistrictInput($any($event.target).value)"
+            (focus)="openDistrictDd()"
+            [disabled]="districts.length === 0"
+            [class.invalid]="err('district')"
+          />
+          <button type="button" class="lookup-btn" (click)="openDistrictDd()" [disabled]="districts.length === 0">▼</button>
+        </div>
+        <div *ngIf="showDistrictDd" class="dropdown">
+          <div *ngFor="let d of filteredDistricts" class="dd-item" (mousedown)="selectDistrict(d)">{{ d.name }}</div>
+          <div *ngIf="filteredDistricts.length === 0" class="dd-empty">No districts found</div>
+        </div>
+        <span *ngIf="err('district')" class="err-msg">District is required</span>
+      </div>
+
+      <!-- Price + Unit row -->
+      <div class="field-row">
+        <div class="field-group">
+          <label>Price (₹) <span class="req">*</span></label>
+          <input
+            type="number"
+            formControlName="price"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            [class.invalid]="err('price')"
+          />
+          <span *ngIf="err('price')" class="err-msg">Valid price required</span>
+        </div>
+
+        <div class="field-group">
+          <label>Unit <span class="req">*</span></label>
+          <select formControlName="unit" [class.invalid]="err('unit')">
+            <option value="per bag">per bag</option>
+            <option value="per tonne">per tonne</option>
+            <option value="per kg">per kg</option>
+            <option value="per litre">per litre</option>
+            <option value="per sq ft">per sq ft</option>
+            <option value="per sq m">per sq m</option>
+            <option value="per piece">per piece</option>
+            <option value="per running ft">per running ft</option>
+            <option value="per cubic ft">per cubic ft</option>
+            <option value="per cubic m">per cubic m</option>
+          </select>
+          <span *ngIf="err('unit')" class="err-msg">Unit is required</span>
+        </div>
+      </div>
+
+      <!-- Price Date -->
+      <div class="field-group">
+        <label>Price Date <span class="req">*</span></label>
+        <input
+          type="date"
+          formControlName="priceDate"
+          [class.invalid]="err('priceDate')"
+        />
+        <span *ngIf="err('priceDate')" class="err-msg">Price date is required</span>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="saveError" class="save-error">{{ saveError }}</div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="saving">
+          {{ saving ? 'Saving…' : (editId ? 'Update Record' : 'Save Record') }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     Delete Confirm Modal
+════════════════════════════════════════════════════ -->
+<div *ngIf="showDeleteModal" class="overlay" (click)="cancelDelete()">
+  <div class="modal modal-sm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Confirm Delete</h2>
+      <button class="close-btn" (click)="cancelDelete()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="del-msg">
+        Delete the price record for
+        <strong>{{ deleteTarget?.materialName }}</strong>
+        in <strong>{{ deleteTarget?.districtName }}, {{ deleteTarget?.stateName }}</strong>?
+      </p>
+      <p class="del-warn">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="cancelDelete()">Cancel</button>
+      <button class="btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>

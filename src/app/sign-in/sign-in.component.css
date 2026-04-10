@@ -1,0 +1,192 @@
+/* Sign-In Container */
+.sign-in-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    padding: 1rem;
+  }
+  
+  /* Sign-In Card */
+  .sign-in-card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  
+  /* Title and Subtitle */
+  .sign-in-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+  }
+  
+  .sign-in-subtitle {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Form Group */
+  .form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+  
+  .form-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f7fafc;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
+    background-color: #fff;
+  }
+  
+  /* Error Message */
+  .error-message {
+    font-size: 0.75rem;
+    color: #e53e3e;
+    margin-top: 0.25rem;
+  }
+  
+  /* Button */
+  .btn {
+    display: inline-block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .btn:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+  }
+  
+  .btn:hover {
+    background: linear-gradient(135deg, #3182ce, #5a67d8);
+  }
+  
+  /* Footer */
+  .sign-in-footer {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: #718096;
+  }
+  
+  .sign-in-footer a {
+    color: #4299e1;
+    text-decoration: none;
+  }
+  
+  .sign-in-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* Success Message */
+  .success-message {
+    font-size: 0.85rem;
+    color: #2f855a;
+    background: #f0fff4;
+    border: 1px solid #9ae6b4;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Phone row with OTP button */
+  .phone-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .phone-row .form-control { flex: 1; }
+
+  .otp-btn {
+    width: auto;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    background: linear-gradient(135deg, #38a169, #2f855a);
+  }
+  .otp-btn:hover { background: linear-gradient(135deg, #2f855a, #276749); }
+  .otp-btn:disabled { background: #cbd5e0; }
+
+  /* Verified badge */
+  .verified-badge {
+    color: #38a169;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 0.5rem;
+  }
+
+  /* OTP panel */
+  .otp-panel {
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+  .otp-info {
+    font-size: 0.85rem;
+    color: #2b6cb0;
+    margin-bottom: 0.75rem;
+  }
+  .otp-input {
+    letter-spacing: 0.3em;
+    font-size: 1.2rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+  .otp-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+  .otp-actions .btn { width: auto; flex: 1; }
+  .text-btn {
+    background: transparent;
+    color: #718096;
+    border: 1px solid #e2e8f0;
+    width: auto;
+    flex: none;
+  }
+  .text-btn:hover { background: #f7fafc; color: #4a5568; }
+
+  /* Secondary button */
+  .secondary-btn {
+    background: transparent;
+    color: #4299e1;
+    border: 1px solid #4299e1;
+  }
+  .secondary-btn:hover { background: #ebf8ff; }

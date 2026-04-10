@@ -1,0 +1,147 @@
+<div class="homepage">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="floating-elements">
+      <div class="float-item">🏗️</div>
+      <div class="float-item">⚡</div>
+      <div class="float-item">🤖</div>
+    </div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-badge">🎨 Live Visual Experience · AI-Powered · Local Ollama</div>
+        <h1>Construction Management<br><span class="hero-accent">Made Beautiful</span></h1>
+        <p>Experience stunning live visuals while managing end-to-end construction projects with AI assistance — planning, risk, cost estimation, and more. All powered by local Ollama AI with breathtaking imagery.</p>
+        <div class="hero-actions">
+          <button (click)="navigateToDashboard()" class="btn primary-btn">Get Started →</button>
+          <a href="#features" class="btn outline-btn">Explore Features</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="hstat-val">5+</div><div class="hstat-label">Modules</div></div>
+        <div class="hstat"><div class="hstat-val">AI</div><div class="hstat-label">Powered</div></div>
+        <div class="hstat"><div class="hstat-val">Live</div><div class="hstat-label">Visuals</div></div>
+        <div class="hstat"><div class="hstat-val">100%</div><div class="hstat-label">Offline</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <h2 class="section-title">Complete Construction Management Suite</h2>
+      <p class="section-sub">Everything you need to manage construction projects from start to finish</p>
+
+      <div class="features-grid">
+        <div class="feature-card" (click)="navigateToDashboard()">
+          <div class="feat-icon">📋</div>
+          <h3>Project Management</h3>
+          <p>Create projects, define phases (Foundation → Handover), assign tasks, track progress with Gantt-style timelines.</p>
+          <ul class="feat-list">
+            <li>✓ Phases & task management</li>
+            <li>✓ Progress tracking</li>
+            <li>✓ AI project plan generation</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" (click)="navigateToDashboard()">
+          <div class="feat-icon">⚠️</div>
+          <h3>Risk Management</h3>
+          <p>Identify, assess, and mitigate construction risks with a professional 5×5 probability-impact matrix.</p>
+          <ul class="feat-list">
+            <li>✓ Risk register</li>
+            <li>✓ 5×5 risk matrix</li>
+            <li>✓ AI risk assessment</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" (click)="navigateToDashboard()">
+          <div class="feat-icon">💰</div>
+          <h3>Cost Estimation (BOQ)</h3>
+          <p>Detailed Bill of Quantities with AI-generated estimates covering civil, structural, MEP, and finishes.</p>
+          <ul class="feat-list">
+            <li>✓ Detailed BOQ</li>
+            <li>✓ Category breakdown</li>
+            <li>✓ AI cost estimation</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" (click)="navigateToDashboard()">
+          <div class="feat-icon">🧱</div>
+          <h3>Material Estimation</h3>
+          <p>Calculate cement, steel, sand, bricks, and concrete requirements based on plot dimensions and room configuration.</p>
+          <ul class="feat-list">
+            <li>✓ Quantity calculator</li>
+            <li>✓ Location-based pricing</li>
+            <li>✓ Quality-based material selection</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" (click)="navigateToDashboard()">
+          <div class="feat-icon">🤖</div>
+          <h3>AI Construction Assistant</h3>
+          <p>Chat with an expert AI assistant for construction advice — foundation, concrete, safety, Vastu, regulations, and more.</p>
+          <ul class="feat-list">
+            <li>✓ Powered by local Ollama</li>
+            <li>✓ Construction domain expert</li>
+            <li>✓ 10+ quick topics</li>
+          </ul>
+        </div>
+
+        <div class="feature-card" routerLink="/supplier-portal">
+          <div class="feat-icon">🏭</div>
+          <h3>Supplier Portal</h3>
+          <p>Dedicated portal for suppliers to receive RFQs, submit quotations, and manage their vendor profile.</p>
+          <ul class="feat-list">
+            <li>✓ RFQ management</li>
+            <li>✓ Quotation submission</li>
+            <li>✓ Profile management</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-section">
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <div class="steps-row">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Setup Ollama</h4>
+          <p>Install Ollama locally and pull a model: <code>ollama pull llama3</code></p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Create Project</h4>
+          <p>Add your construction project with details, budget, and timeline</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>AI Analysis</h4>
+          <p>Let AI generate project plans, identify risks, and estimate costs</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h4>Track & Manage</h4>
+          <p>Monitor phases, tasks, and risks throughout construction</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>Ready to Build Smarter?</h2>
+      <p>Start managing your construction projects with AI-powered insights today.</p>
+      <div class="cta-actions">
+        <button (click)="navigateToDashboard()" class="btn primary-btn large">Start Now →</button>
+        <a routerLink="/supplier-portal" class="btn outline-btn large">🏭 Supplier Portal</a>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,141 @@
+<div class="material-price-list-container">
+  <div class="list-header">
+    <h1 class="list-title">Material Price List</h1>
+    <div class="actions">
+      <div class="search-container">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search..." 
+          [(ngModel)]="searchTerm"
+          (input)="filterItems()"
+        >
+        <span class="search-icon">
+          <!-- SVG omitted for brevity -->
+        </span>
+      </div>
+      <button class="btn btn-primary add-btn" (click)="onAddNew()">
+        <!-- SVG omitted for brevity -->
+        Add New
+      </button>
+    </div>
+  </div>
+
+  <div class="list-content">
+    <!-- Loading state -->
+    <div class="loading-container" *ngIf="loading">
+      <div class="spinner"></div>
+      <p>Loading material prices...</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-container" *ngIf="error">
+      <div class="error-icon">
+        <!-- SVG omitted for brevity -->
+      </div>
+      <p>Failed to load material prices. Please try again later.</p>
+      <button class="btn btn-secondary" (click)="loadMaterialPrices()">Retry</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-container" *ngIf="!loading && !error && filteredPrices.length === 0">
+      <div class="empty-icon">
+        <!-- SVG omitted for brevity -->
+      </div>
+      <p *ngIf="searchTerm">No results found for "{{searchTerm}}"</p>
+      <p *ngIf="!searchTerm">No material prices available</p>
+      <button class="btn btn-primary" (click)="onAddNew()">Add Material Price</button>
+    </div>
+
+    <!-- Data table -->
+    <div class="table-container" *ngIf="!loading && !error && filteredPrices.length > 0">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th (click)="sort('materialName')">
+              Material
+              <span class="sort-icon" *ngIf="sortColumn === 'materialName'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th (click)="sort('country')">
+              Country
+              <span class="sort-icon" *ngIf="sortColumn === 'country'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th (click)="sort('stateName')">
+              State
+              <span class="sort-icon" *ngIf="sortColumn === 'stateName'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th (click)="sort('districtName')">
+              District
+              <span class="sort-icon" *ngIf="sortColumn === 'districtName'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th (click)="sort('price')">
+              Price
+              <span class="sort-icon" *ngIf="sortColumn === 'price'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th (click)="sort('pricedate')">
+              Price Date
+              <span class="sort-icon" *ngIf="sortColumn === 'pricedate'">
+                <!-- SVG omitted for brevity -->
+              </span>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let price of filteredPrices">
+            <td>{{ price.materialName }}</td>
+            <td>{{ price.country }}</td>
+            <td>{{ price.stateName }}</td>
+            <td>{{ price.districtName }}</td>
+            <td class="price-column">₹{{ price.price | number:'1.2-2' }}</td>
+            <td>{{ price.pricedate | date:'MMM d, yyyy' }}</td>
+            <td class="actions-column">
+              <button class="action-btn edit-btn" (click)="onEdit(price)">
+                <!-- SVG omitted for brevity -->
+              </button>
+              <button class="action-btn delete-btn" (click)="onDelete(price)">
+                <!-- SVG omitted for brevity -->
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination and Delete Modal remain unchanged, but update property names in the modal: -->
+    <div class="modal-backdrop" *ngIf="showDeleteConfirmation" (click)="cancelDelete()"></div>
+    <div class="modal" *ngIf="showDeleteConfirmation">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Confirm Deletion</h3>
+          <button class="close-btn" (click)="cancelDelete()">
+            <!-- SVG omitted for brevity -->
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete this material price?</p>
+          <p class="delete-details">
+            <strong>Material:</strong> {{ selectedPrice?.materialName }}<br>
+            <strong>Location:</strong> {{ selectedPrice?.districtName }}, {{ selectedPrice?.stateName }}, {{ selectedPrice?.country }}<br>
+            <strong>Price:</strong> ₹{{ selectedPrice?.price | number:'1.2-2' }} ({{ selectedPrice?.pricedate | date:'MMM d, yyyy' }})
+          </p>
+          <p class="delete-warning">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="cancelDelete()">Cancel</button>
+          <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

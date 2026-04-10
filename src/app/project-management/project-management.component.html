@@ -1,0 +1,370 @@
+<div class="pm-container">
+  <!-- Alerts -->
+  <div *ngIf="errorMsg" style="background:#ef444422;color:#ef4444;border:1px solid #ef4444;padding:10px 16px;border-radius:6px;margin-bottom:12px;">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e;padding:10px 16px;border-radius:6px;margin-bottom:12px;">{{ successMsg }}</div>
+
+  <!-- Header -->
+  <div class="pm-header">
+    <div>
+      <h1>🏗️ Project Management</h1>
+      <p>Plan, track, and manage your construction projects end-to-end</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateProject()">+ New Project</button>
+  </div>
+
+  <div class="pm-body">
+    <!-- Projects List -->
+    <div class="projects-panel">
+      <h3>Projects ({{ projects.length }})</h3>
+      <div *ngIf="isLoading" class="loading">Loading...</div>
+      <div *ngIf="!isLoading && projects.length === 0" class="empty-state">
+        No projects yet. Create your first project!
+      </div>
+      <div *ngFor="let p of projects" class="project-card" [class.selected]="selectedProject?.id === p.id" (click)="selectProject(p)">
+        <div class="project-card-header">
+          <span class="project-name">{{ p.name }}</span>
+          <span class="badge" [class]="getStatusBadge(p.status)">{{ p.status }}</span>
+        </div>
+        <div class="project-meta">
+          <span>📍 {{ p.location }}</span>
+          <span>👤 {{ p.clientName }}</span>
+        </div>
+        <div class="project-meta">
+          <span>🏢 {{ p.projectType }}</span>
+          <span>💰 ₹{{ p.budget | number }}</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm btn-edit" (click)="editProject(p); $event.stopPropagation()">Edit</button>
+          <button class="btn-sm btn-danger" (click)="deleteProject(p.id!); $event.stopPropagation()">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Detail -->
+    <div class="project-detail" *ngIf="selectedProject">
+      <div class="detail-header">
+        <div>
+          <h2>{{ selectedProject.name }}</h2>
+          <p class="detail-sub">{{ selectedProject.description }}</p>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-secondary" (click)="generateAIPlan()" [disabled]="isGeneratingAIPlan">
+            {{ isGeneratingAIPlan ? '⏳ Generating...' : '🤖 AI Project Plan' }}
+          </button>
+          <button class="btn-secondary" (click)="addDefaultPhases()">⚡ Add Default Phases</button>
+        </div>
+      </div>
+
+      <!-- Project Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Area</div>
+          <div class="stat-value">{{ selectedProject.totalArea | number }} sqft</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Floors</div>
+          <div class="stat-value">{{ selectedProject.floors }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Budget</div>
+          <div class="stat-value">₹{{ selectedProject.budget | number }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Start Date</div>
+          <div class="stat-value">{{ selectedProject.startDate | date:'dd MMM yyyy' }}</div>
+        </div>
+      </div>
+
+      <!-- AI Plan Result -->
+      <div *ngIf="showAIPlanResult" class="ai-plan-box">
+        <div class="ai-plan-header">
+          <h4>🤖 AI Generated Project Plan</h4>
+          <button class="btn-sm" (click)="showAIPlanResult = false">✕ Close</button>
+        </div>
+        <pre class="ai-plan-content">{{ aiPlanResult }}</pre>
+      </div>
+
+      <!-- Detail Tabs -->
+      <div class="detail-tabs">
+        <button class="detail-tab" [class.active]="detailTab==='phases'"    (click)="detailTab='phases'">📋 Phases & Tasks</button>
+        <button class="detail-tab" [class.active]="detailTab==='gantt'"     (click)="detailTab='gantt'">📅 Gantt Chart</button>
+        <button class="detail-tab" [class.active]="detailTab==='documents'" (click)="detailTab='documents'; loadDocuments(selectedProject.id!)">📎 Documents <span *ngIf="documents.length" class="tab-badge">{{documents.length}}</span></button>
+      </div>
+
+      <!-- ═══ TAB: PHASES & TASKS ═══ -->
+      <div class="phases-section" *ngIf="detailTab==='phases'">
+        <div class="section-header">
+          <h3>Project Phases & Tasks</h3>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-sm btn-secondary" (click)="exportPhasesCsv()" *ngIf="selectedProject.phases?.length">📄 Export CSV</button>
+            <button class="btn-primary" (click)="openAddPhase()">+ Add Phase</button>
+          </div>
+        </div>
+
+        <div *ngIf="!selectedProject.phases?.length" class="empty-state">
+          No phases yet. Click "Add Default Phases" or add manually.
+        </div>
+
+        <div *ngFor="let phase of selectedProject.phases" class="phase-card">
+          <div class="phase-header">
+            <div class="phase-info">
+              <span class="phase-order">{{ phase.order }}</span>
+              <div>
+                <div class="phase-name">{{ phase.name }}</div>
+                <div class="phase-dates">{{ phase.startDate | date:'dd MMM' }} → {{ phase.endDate | date:'dd MMM yyyy' }}</div>
+              </div>
+            </div>
+            <div class="phase-right">
+              <span class="badge" [class]="getStatusBadge(phase.status)">{{ phase.status }}</span>
+              <div class="progress-wrap">
+                <div class="progress-bar" [style.width.%]="phase.progress" [style.background]="getProgressColor(phase.progress)"></div>
+              </div>
+              <span class="progress-pct">{{ phase.progress }}%</span>
+              <button class="btn-sm btn-edit" (click)="editPhase(phase)">Edit</button>
+              <button class="btn-sm btn-danger" (click)="deletePhase(phase.id!)">Del</button>
+              <button class="btn-sm btn-add" (click)="openAddTask(phase.id!)">+ Task</button>
+            </div>
+          </div>
+
+          <!-- Tasks -->
+          <div class="tasks-list" *ngIf="phase.tasks?.length">
+            <div *ngFor="let task of phase.tasks" class="task-row">
+              <div class="task-priority priority-{{task.priority}}"></div>
+              <div class="task-info">
+                <span class="task-name">{{ task.name }}</span>
+                <span class="task-meta">{{ task.assignedTo || 'Unassigned' }} · {{ task.startDate | date:'dd MMM' }}</span>
+              </div>
+              <span class="badge" [class]="getStatusBadge(task.status)">{{ task.status }}</span>
+              <button class="btn-sm btn-edit" (click)="editTask(task)">Edit</button>
+              <button class="btn-sm btn-danger" (click)="deleteTask(task.id!)">Del</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: GANTT CHART ═══ -->
+      <div class="gantt-section" *ngIf="detailTab==='gantt'">
+        <div class="section-header">
+          <h3>Gantt Chart</h3>
+        </div>
+        <div *ngIf="!selectedProject.phases?.length" class="empty-state">
+          No phases yet. Add phases to view the Gantt chart.
+        </div>
+        <div *ngIf="selectedProject.phases?.length" class="gantt-wrap">
+          <div class="gantt-header">
+            <div class="gantt-label-col">Phase</div>
+            <div class="gantt-bar-col">
+              <div class="gantt-months">
+                <span *ngFor="let m of ganttMonthLabels(selectedProject)" class="gantt-month" [style.left]="m.left">{{ m.label }}</span>
+              </div>
+            </div>
+          </div>
+          <div *ngFor="let phase of selectedProject.phases" class="gantt-row">
+            <div class="gantt-label-col">
+              <span class="gantt-phase-name">{{ phase.name }}</span>
+              <span class="gantt-phase-pct">{{ phase.progress }}%</span>
+            </div>
+            <div class="gantt-bar-col">
+              <div class="gantt-track">
+                <div class="gantt-bar" [ngStyle]="ganttBarStyle(phase, selectedProject)">
+                  <span class="gantt-bar-label">{{ phase.status }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: DOCUMENTS ═══ -->
+      <div class="docs-section" *ngIf="detailTab==='documents'">
+        <div class="section-header">
+          <h3>Project Documents</h3>
+        </div>
+        <div class="doc-upload-area">
+          <input type="text" [(ngModel)]="docUploadDesc" placeholder="Description (optional)" class="doc-desc-input">
+          <label class="btn-upload">
+            📎 Attach File
+            <input type="file" style="display:none" (change)="onFileSelected($event)">
+          </label>
+        </div>
+        <div *ngIf="docError" class="doc-error">{{ docError }}</div>
+        <div *ngIf="docLoading && !documents.length" class="loading">Uploading...</div>
+        <div *ngIf="!docLoading && documents.length === 0" class="empty-state">
+          No documents yet. Attach files above.
+        </div>
+        <div class="doc-list">
+          <div *ngFor="let doc of documents" class="doc-row">
+            <span class="doc-icon">{{ docIcon(doc.contentType) }}</span>
+            <div class="doc-info">
+              <span class="doc-name">{{ doc.fileName }}</span>
+              <span class="doc-meta">{{ doc.sizeDisplay }} · {{ doc.uploadedAt | date:'dd MMM yyyy' }}</span>
+              <span *ngIf="doc.description" class="doc-desc-text">{{ doc.description }}</span>
+            </div>
+            <button class="btn-sm btn-edit" (click)="downloadDocument(doc)">⬇ Download</button>
+            <button class="btn-sm btn-danger" (click)="deleteDocument(doc.id)">Del</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-selection" *ngIf="!selectedProject">
+      <div class="no-sel-icon">🏗️</div>
+      <p>Select a project to view details and manage phases</p>
+    </div>
+  </div>
+</div>
+
+<!-- Project Form Modal -->
+<div *ngIf="showProjectForm" style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 10001;">Modal should be open</div>
+<div class="modal-overlay" *ngIf="showProjectForm" (click)="showProjectForm=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingProjectId ? 'Edit' : 'Create' }} Project</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Project Name *</label>
+        <input [(ngModel)]="projectForm.name" placeholder="e.g. Green Valley Residence">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="projectForm.description" rows="2" placeholder="Brief project description"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Client Name</label>
+        <input [(ngModel)]="projectForm.clientName" placeholder="Client full name">
+      </div>
+      <div class="form-group">
+        <label>Location</label>
+        <input [(ngModel)]="projectForm.location" placeholder="City, State">
+      </div>
+      <div class="form-group">
+        <label>Project Type</label>
+        <select [(ngModel)]="projectForm.projectType">
+          <option *ngFor="let t of projectTypes" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="projectForm.status">
+          <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" [(ngModel)]="projectForm.startDate">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" [(ngModel)]="projectForm.endDate">
+      </div>
+      <div class="form-group">
+        <label>Budget (₹)</label>
+        <input type="number" [(ngModel)]="projectForm.budget" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Total Area (sqft)</label>
+        <input type="number" [(ngModel)]="projectForm.totalArea" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Floors</label>
+        <input type="number" [(ngModel)]="projectForm.floors" min="1" placeholder="1">
+      </div>
+    </div>
+    <div *ngIf="errorMsg" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;padding:8px 12px;border-radius:6px;margin-top:12px;font-size:0.85rem;">{{ errorMsg }}</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showProjectForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveProject()" [disabled]="isSaving">{{ isSaving ? 'Saving...' : (editingProjectId ? 'Update' : 'Create') + ' Project' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Phase Form Modal -->
+<div class="modal-overlay" *ngIf="showPhaseForm" (click)="showPhaseForm=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingPhaseId ? 'Edit' : 'Add' }} Phase</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Phase Name *</label>
+        <input [(ngModel)]="phaseForm.name" placeholder="e.g. Foundation Work">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="phaseForm.description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" [(ngModel)]="phaseForm.startDate">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" [(ngModel)]="phaseForm.endDate">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="phaseForm.status">
+          <option *ngFor="let s of phaseStatuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Progress ({{ phaseForm.progress }}%)</label>
+        <input type="range" [(ngModel)]="phaseForm.progress" min="0" max="100" step="5">
+      </div>
+      <div class="form-group">
+        <label>Order</label>
+        <input type="number" [(ngModel)]="phaseForm.order" min="1">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showPhaseForm=false">Cancel</button>
+      <button class="btn-primary" (click)="savePhase()">{{ editingPhaseId ? 'Update' : 'Add' }} Phase</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Form Modal -->
+<div class="modal-overlay" *ngIf="showTaskForm" (click)="showTaskForm=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingTaskId ? 'Edit' : 'Add' }} Task</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Task Name *</label>
+        <input [(ngModel)]="taskForm.name" placeholder="e.g. Pour concrete for column C1">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="taskForm.description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Assigned To</label>
+        <input [(ngModel)]="taskForm.assignedTo" placeholder="Person or team">
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select [(ngModel)]="taskForm.priority">
+          <option *ngFor="let p of priorities" [value]="p.value">{{ p.label }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" [(ngModel)]="taskForm.startDate">
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="date" [(ngModel)]="taskForm.endDate">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="taskForm.status">
+          <option *ngFor="let s of taskStatuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea [(ngModel)]="taskForm.notes" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showTaskForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveTask()">{{ editingTaskId ? 'Update' : 'Add' }} Task</button>
+    </div>
+  </div>
+</div>

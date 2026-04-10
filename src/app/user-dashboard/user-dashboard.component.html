@@ -1,0 +1,477 @@
+<div class="dashboard-container">
+  <main class="main-content">
+    <header class="main-header">
+      <h1>🏗️ My Dashboard</h1>
+      <div class="user-info">
+        <span>Welcome, {{userName}}</span>
+        <div class="avatar">{{userInitials}}</div>
+      </div>
+    </header>
+    <div class="dashboard-content">
+      <section class="plan-generator">
+        <div class="section-header">
+          <h2>Generate New Plan</h2>
+          <p>Configure your building requirements and get AI-generated floor plans with elevation views.</p>
+        </div>
+        <div class="generator-container">
+          <div class="requirements-form">
+            <!-- Basic Details -->
+            <div class="form-group">
+              <label for="planType">Plan Type</label>
+              <select id="planType" [(ngModel)]="planType" class="form-control">
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="length">Length (ft)</label>
+              <input type="number" id="length" [(ngModel)]="length" class="form-control" placeholder="e.g. 30">
+            </div>
+            <div class="form-group">
+              <label for="breadth">Breadth (ft)</label>
+              <input type="number" id="breadth" [(ngModel)]="breadth" class="form-control" placeholder="e.g. 50">
+            </div>
+            <div class="form-group">
+              <label for="quality">Material Quality</label>
+              <select id="quality" [(ngModel)]="selectedQuality" class="form-control">
+                <option value="M">Medium</option>
+                <option value="S">Standard</option>
+                <option value="L">Low</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="floors">Number of Floors</label>
+              <input type="number" id="floors" [(ngModel)]="floors" class="form-control" min="1" max="5" (change)="onFloorsChange()" placeholder="e.g. 2">
+            </div>
+            <div class="form-group">
+              <label for="facing">Facing</label>
+              <select id="facing" [(ngModel)]="facing" class="form-control">
+                <option value="North">North</option>
+                <option value="South">South</option>
+                <option value="East">East</option>
+                <option value="West">West</option>
+              </select>
+            </div>
+            <!-- Location Section -->
+            <div class="form-group">
+              <label for="country">Country</label>
+              <select id="country" [(ngModel)]="selectedCountryId" (ngModelChange)="onCountryChange()" class="form-control">
+                <option [ngValue]="null">Select Country</option>
+                <option *ngFor="let country of countries" [ngValue]="country.id">{{country.name}}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="state">State</label>
+              <select id="state" [(ngModel)]="selectedStateId" (ngModelChange)="onStateChange()" class="form-control" [disabled]="!selectedCountryId">
+                <option [ngValue]="null">Select State</option>
+                <option *ngFor="let state of states" [ngValue]="state.id">{{state.name}}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="district">District</label>
+              <select id="district" [(ngModel)]="selectedDistrictId" class="form-control" [disabled]="!selectedStateId">
+                <option [ngValue]="null">Select District</option>
+                <option *ngFor="let district of districts" [ngValue]="district.id">{{district.name}}</option>
+              </select>
+            </div>
+            <!-- Floor Configuration Section -->
+            <div class="floor-configs-section">
+              <h3>Room Configuration</h3>
+              <div *ngFor="let config of floorConfigs; let i = index" class="floor-config">
+                <h4>{{getFloorName(i)}}</h4>
+                <div class="room-inputs">
+                  <div class="room-input-group">
+                    <label>Kitchen Count</label>
+                    <input type="number" [(ngModel)]="config.kitchen" min="0" max="5" class="form-control">
+                  </div>
+                  <div class="room-input-group">
+                    <label>Bedroom Count</label>
+                    <input type="number" [(ngModel)]="config.bedroom" min="0" max="10" class="form-control">
+                  </div>
+                  <div class="room-input-group">
+                    <label>Master Bedroom Count</label>
+                    <input type="number" [(ngModel)]="config.masterBedroom" min="0" max="5" class="form-control">
+                  </div>
+                  <div class="room-input-group">
+                    <label>Bathroom Count</label>
+                    <input type="number" [(ngModel)]="config.bathroom" min="0" max="10" class="form-control">
+                  </div>
+                  <div class="room-input-group">
+                    <label>Living Room Count</label>
+                    <input type="number" [(ngModel)]="config.livingRoom" min="0" max="5" class="form-control">
+                  </div>
+                  <div class="room-input-group">
+                    <label>Dining Room Count</label>
+                    <input type="number" [(ngModel)]="config.diningRoom" min="0" max="5" class="form-control">
+                  </div>
+                </div>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="config.hasParking">
+                    <span>Parking Required</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="config.hasBalcony">
+                    <span>Balcony Required</span>
+                  </label>
+                </div>
+                <!-- Room Dimensions Table (AI Response) -->
+                <!-- <div *ngIf="aiRoomDimensions && aiRoomDimensions.length > 0">
+                  <h5>Room Dimensions (AI)</h5>
+                  <table class="room-dim-table">
+                    <thead>
+                      <tr>
+                        <th>Room</th>
+                        <th>Length (ft)</th>
+                        <th>Breadth (ft)</th>
+                        <th>Area (sq ft)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ng-container *ngIf="aiRoomDimensions && aiRoomDimensions.length > 0">
+                        <tr *ngFor="let dim of getRoomDimensionsForFloor(i)">
+                          <td>{{dim.Room}}</td>
+                          <td>{{dim.Length}}</td>
+                          <td>{{dim.Breadth}}</td>
+                          <td>{{dim.Length * dim.Breadth}}</td>
+                        </tr>
+                      </ng-container>
+                    </tbody>
+                  </table>
+                </div> -->
+                <!-- End Room Dimensions Table -->
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label for="requirements">Additional Requirements</label>
+              <textarea id="requirements" [(ngModel)]="requirements" class="form-control" rows="4" placeholder="Describe any special requirements, preferences, or design considerations..."></textarea>
+            </div>
+            <!-- Add this section where you want the user to select construction materials, e.g., after requirements input -->
+            <div class="form-group materials-selection-row">
+              <label style="font-weight:600;">Select Construction Materials</label>
+              <div class="materials-dropdowns-row">
+                <div *ngFor="let group of [
+                    {name: 'Paint', id: 1},
+                    {name: 'Gravel', id: 2},
+                    {name: 'Sand', id: 3},
+                    {name: 'Steel', id: 4},
+                    {name: 'Cement', id: 5},
+                    {name: 'Bricks', id: 6},
+                    {name: 'Concrete', id: 7},
+                    {name: 'Wood', id: 8},
+                    {name: 'Pipes & Plumbing', id: 9},
+                    {name: 'Electrical', id: 10},
+                    {name: 'Floor Tiles', id: 11}
+                  ]; let i = index" class="material-dropdown-group material-dropdown-inline">
+                  <label class="material-label">{{group.name}}</label>
+                  <select class="form-control material-select-sm"
+                          [ngModel]="selectedMaterialsByGroup[group.id]"
+                          (ngModelChange)="onMaterialDropdownChange(group.id, $event)"
+                          (focus)="fetchMaterialsForGroup(group)">
+                    <option [ngValue]="null">-- Select --</option>
+                    <option *ngIf="materialsLoading[group.id]" disabled>Loading...</option>
+                    <option *ngFor="let material of materialsByGroup[group.id] || []"
+                            [ngValue]="material.materialId">
+                      {{material.materialName}}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <button class="generate-btn" [disabled]="generating" (click)="generatePlan()">
+              <span *ngIf="!generating">Generate Plan</span>
+              <div class="spinner" *ngIf="generating"></div>
+            </button>
+          </div>
+          <div class="output-preview">
+            <!-- Empty state -->
+            <div *ngIf="!currentPlan && !generating" class="empty-state">
+              <p>Your generated plan will appear here</p>
+            </div>
+            <!-- Generating state -->
+            <div *ngIf="generating" class="generating-state">
+              <div class="generating-animation"></div>
+              <p>Generating your plan...</p>
+            </div>
+            <!-- Plan result with elevation and floor plans -->
+            <div *ngIf="currentPlan && !generating" class="plan-result">
+              <!-- Elevation View -->
+              <div class="elevation-container">
+                <h3>Building Elevation</h3>
+                <div class="plan-image-container">
+                  <!-- Image functionality on hold: show empty image box -->
+                  <div class="plan-image elevation-image" style="width:400px;height:300px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;color:#a0aec0;">(Image on hold)</div>
+                </div>
+              </div>
+
+              <!-- Floor Plans -->
+              <div class="floor-plans-container">
+                <h3>Floor Plans</h3>
+                <!-- Floor Plans Grid -->
+                <div class="floor-plans-grid">
+                  <div *ngFor="let floorPlan of currentPlan.floorPlans; let i = index" class="floor-plan-item">
+                    <h4>{{getFloorName(floorPlan.floorNumber - 1)}}</h4>
+                    <!-- Image functionality on hold: show empty image box -->
+                    <img *ngIf="floorPlan.imageUrl; else noImage" [src]="floorPlan.imageUrl" class="plan-image floor-image" alt="Floor Plan MAP" style="width:400px;height:300px;object-fit:contain;border:1px solid #e2e8f0;background:#f8fafc;" />
+                    <ng-template #noImage>
+                      <div class="plan-image floor-image" style="width:400px;height:300px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;color:#a0aec0;">(Image on hold)</div>
+                    </ng-template>
+                    <div class="floor-summary">
+                      <div class="room-summary">
+                        <span *ngIf="floorPlan.roomConfig.kitchen > 0">{{floorPlan.roomConfig.kitchen}} Kitchen</span>
+                        <span *ngIf="floorPlan.roomConfig.bedroom > 0">{{floorPlan.roomConfig.bedroom}} Bedroom(s)</span>
+                        <span *ngIf="floorPlan.roomConfig.masterBedroom > 0">{{floorPlan.roomConfig.masterBedroom}} Master Bedroom(s)</span>
+                        <span *ngIf="floorPlan.roomConfig.bathroom > 0">{{floorPlan.roomConfig.bathroom}} Bathroom(s)</span>
+                        <span *ngIf="floorPlan.roomConfig.livingRoom > 0">{{floorPlan.roomConfig.livingRoom}} Living Room</span>
+                        <span *ngIf="floorPlan.roomConfig.diningRoom > 0">{{floorPlan.roomConfig.diningRoom}} Dining Room</span>
+                        <span *ngIf="floorPlan.roomConfig.hasParking">Parking</span>
+                        <span *ngIf="floorPlan.roomConfig.hasBalcony">Balcony</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Place the Room Dimensions carousel here, OUTSIDE the ngFor -->
+              <div *ngIf="aiRoomDimensions && aiRoomDimensions.length > 0">
+                <h5>Room Dimensions (AI)</h5>
+                <div *ngIf="floors > 1" class="room-dim-carousel" style="display: flex; align-items: center; gap: 1rem;">
+                  <button class="carousel-btn"
+                          (click)="goToPrevRoomDimFloor()"
+                          [disabled]="currentRoomDimFloor === 0"
+                          title="Previous Floor">
+                    &#8592;
+                  </button>
+                  <span class="carousel-label">{{ getFloorName(currentRoomDimFloor) }}</span>
+                  <button class="carousel-btn"
+                          (click)="goToNextRoomDimFloor()"
+                          [disabled]="currentRoomDimFloor === floors - 1"
+                          title="Next Floor">
+                    &#8594;
+                  </button>
+                </div>
+                <table class="room-dim-table">
+                  <thead>
+                    <tr>
+                      <th>Room</th>
+                      <th>Length (ft)</th>
+                      <th>Breadth (ft)</th>
+                      <th>Area (sq ft)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let dim of getRoomDimensionsForFloor(currentRoomDimFloor)">
+                      <td>{{dim.Room}}</td>
+                      <td>{{dim.Length}}</td>
+                      <td>{{dim.Breadth}}</td>
+                      <td>{{dim.Length * dim.Breadth}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Plan Details -->
+              <div class="plan-details">
+                <h3>{{currentPlan.title}}</h3>
+                <p class="plan-description">{{currentPlan.description}}</p>
+                <div class="plan-metadata">
+                  <span class="metadata-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                    </svg>
+                    Total Area: {{currentPlan.length * currentPlan.breadth}} sq ft
+                  </span>
+                  <span class="metadata-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                    {{currentPlan.location.district}}, {{currentPlan.location.state}}
+                  </span>
+                  <span class="metadata-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M6 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H9v1.07a7.001 7.001 0 0 1 3.274 12.474l-.441.258a.5.5 0 0 1-.515-.058L8 11.151 4.682 14.092a.5.5 0 0 1-.515.058l-.441-.258A7.001 7.001 0 0 1 7 2.07V1h-.5A.5.5 0 0 1 6 .5zm2 5.6V9a.5.5 0 0 1-.5.5H4.5a.5.5 0 0 1 0-1h2V6.1a.5.5 0 1 1 1 0z"/>
+                    </svg>
+                    {{currentPlan.createdAt | date:'medium'}}
+                  </span>
+                </div>
+
+                <!-- Cost Estimation Section -->
+                <div class="cost-estimation" *ngIf="showCostEstimate">
+                  <div class="cost-display">
+                    <h4>Estimated Construction Cost</h4>
+                    <div class="cost-amount">₹{{currentPlan.estimatedCost | number}}</div>
+                    <p class="cost-note">*Estimated cost includes materials, labor, and basic finishing. Final cost may vary based on specifications and market rates.</p>
+                  </div>
+                </div>
+
+                <div class="plan-actions">
+                  <button class="action-btn download-btn" (click)="downloadPlan(currentPlan)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Download
+                  </button>
+                  <button class="action-btn share-btn" (click)="sharePlan(currentPlan)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5zm-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>
+                    </svg>
+                    Share
+                  </button>
+                  <button class="action-btn cost-btn" (click)="getConstructionCostEstimate()" 
+                          *ngIf="!showCostEstimate" [disabled]="generating">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718H4zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.05zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73l.348.086z"/>
+                    </svg>
+                    Get Cost Estimate
+                  </button>
+                  <button class="action-btn realmap-btn" (click)="getRealMapFromBackend()" [disabled]="generating || !aiRoomDimensions || aiRoomDimensions.length === 0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm0 1.5A6.5 6.5 0 1 1 1.5 8 6.508 6.508 0 0 1 8 1.5zm0 2A4.5 4.5 0 1 0 12.5 8 4.505 4.505 0 0 0 8 3.5zm0 1A3.5 3.5 0 1 1 4.5 8 3.504 3.504 0 0 1 8 4.5z"/>
+                    </svg>
+                    Get Real Map
+                  </button>
+                </div>
+                <div *ngIf="realMapImageUrl" class="realmap-image-container">
+                  <h4>Real Map (Backend)</h4>
+                  <img [src]="realMapImageUrl" alt="Real Map" style="width:400px;height:300px;object-fit:contain;border:1px solid #e2e8f0;background:#f8fafc;" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- Recent Plans Section -->
+      <section class="recent-plans">
+        <div class="section-header">
+          <h2>Recent Plans</h2>
+          <a class="view-all-link">View All</a>
+        </div>
+
+        <div class="plans-grid" *ngIf="recentPlans.length > 0">
+          <div class="plan-card" *ngFor="let plan of recentPlans" (click)="viewPlan(plan)">
+            <div class="plan-card-image">
+              <img [src]="plan.elevationImageUrl" alt="Plan Thumbnail">
+            </div>
+            <div class="plan-card-content">
+              <h3>{{plan.title}}</h3>
+              <p class="plan-card-location">{{plan.location.district}}, {{plan.location.state}}</p>
+              <p class="plan-card-dimensions">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                </svg>
+                {{plan.floors}} Floor(s) • {{plan.length * plan.breadth}} sq ft
+              </p>
+              <p class="plan-card-date">{{plan.createdAt | date:'mediumDate'}}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-plans" *ngIf="recentPlans.length === 0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+          </svg>
+          <p>You haven't created any plans yet</p>
+          <p>Start by generating your first plan above!</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Conversation History Panel -->
+  <aside class="conversation-panel" [class.open]="showConversation">
+    <div class="conversation-header">
+      <h3>AI Assistant</h3>
+      <button class="close-btn" (click)="toggleConversation()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="conversation-content">
+      <div class="message-container" *ngFor="let message of conversationHistory">
+        <div class="message" [ngClass]="{'user-message': message.sender === 'user', 'ai-message': message.sender === 'ai'}">
+          <div class="message-header">
+            <span class="sender-name">{{ message.sender === 'user' ? 'You' : 'AI Assistant' }}</span>
+            <span class="message-time">{{ message.timestamp | date:'shortTime' }}</span>
+          </div>
+          <div class="message-body">
+            {{ message.content }}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="conversation-input">
+      <input 
+        type="text" 
+        [(ngModel)]="messageInput" 
+        placeholder="Ask about your plan or request changes..." 
+        (keyup.enter)="sendMessage()"
+      >
+      <button class="send-btn" (click)="sendMessage()" [disabled]="!messageInput.trim()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+        </svg>
+      </button>
+
+      <button (click)="getAIMaterialsAndDimensions()" [disabled]="generating">
+  Get Materials & Calculate Price
+</button>
+      
+    </div>
+  </aside>
+  <!-- Room Configuration Popup -->
+  <div class="room-config-popup-backdrop" *ngIf="showRoomConfigPopup">
+    <div class="room-config-popup">
+      <h2>Configure Rooms for Each Floor</h2>
+      <div *ngFor="let config of tempFloorConfigs; let i = index" class="floor-config-popup">
+        <h4>{{getFloorName(i)}}</h4>
+        <div class="room-inputs">
+          <div class="room-input-group">
+            <label>Kitchen</label>
+            <input type="number" [(ngModel)]="config.kitchen" min="0" max="5" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>Bedroom</label>
+            <input type="number" [(ngModel)]="config.bedroom" min="0" max="10" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>Master Bedroom</label>
+            <input type="number" [(ngModel)]="config.masterBedroom" min="0" max="10" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>Bathroom</label>
+            <input type="number" [(ngModel)]="config.bathroom" min="0" max="10" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>Living Room</label>
+            <input type="number" [(ngModel)]="config.livingRoom" min="0" max="5" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>Dining Room</label>
+            <input type="number" [(ngModel)]="config.diningRoom" min="0" max="2" class="form-control">
+          </div>
+          <div class="room-input-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="config.hasParking"> Parking
+            </label>
+          </div>
+          <div class="room-input-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="config.hasBalcony"> Balcony
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="popup-actions">
+        <button (click)="confirmRoomConfigs()" class="popup-btn confirm-btn">Confirm</button>
+        <button (click)="cancelRoomConfigs()" class="popup-btn cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

@@ -1,0 +1,140 @@
+<div class="contact-form-container container mt-4 p-4 shadow rounded bg-light position-relative">
+  <!-- Close Button -->
+  <button
+    type="button"
+    class="btn-close position-absolute top-0 end-0 m-2"
+    aria-label="Close"
+    (click)="onClose()"
+  >X</button>
+
+  <div class="form-card">
+    <h2 class="form-title text-center mb-4">Contact Us</h2>
+    <p class="form-subtitle text-center">We'd love to hear from you! Please fill out the form below.</p>
+
+    <form [formGroup]="contactForm" (ngSubmit)="onSubmit()" class="contact-form" novalidate>
+      <div class="alert alert-success" *ngIf="submitSuccess" role="alert">
+        Thank you! Your message has been sent successfully.
+      </div>
+      <div class="alert alert-danger" *ngIf="submitError" role="alert">
+        An error occurred. Please try again later.
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="firstName" class="form-label">First Name*</label>
+          <input
+            type="text"
+            id="firstName"
+            formControlName="firstName"
+            class="form-control"
+            placeholder="Enter your first name"
+            [class.is-invalid]="hasError('firstName', 'required') || hasError('firstName', 'minlength')"
+          >
+          <div class="invalid-feedback" *ngIf="hasError('firstName', 'required')">First name is required.</div>
+          <div class="invalid-feedback" *ngIf="hasError('firstName', 'minlength')">Minimum 2 characters.</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="lastName" class="form-label">Last Name*</label>
+          <input
+            type="text"
+            id="lastName"
+            formControlName="lastName"
+            class="form-control"
+            placeholder="Enter your last name"
+            [class.is-invalid]="hasError('lastName', 'required') || hasError('lastName', 'minlength')"
+          >
+          <div class="invalid-feedback" *ngIf="hasError('lastName', 'required')">Last name is required.</div>
+          <div class="invalid-feedback" *ngIf="hasError('lastName', 'minlength')">Minimum 2 characters.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="email" class="form-label">Email*</label>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            class="form-control"
+            placeholder="Enter your email"
+            [class.is-invalid]="hasError('email', 'required') || hasError('email', 'email')"
+          >
+          <div class="invalid-feedback" *ngIf="hasError('email', 'required')">Email is required.</div>
+          <div class="invalid-feedback" *ngIf="hasError('email', 'email')">Invalid email format.</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="phone" class="form-label">Phone*</label>
+          <input
+            type="tel"
+            id="phone"
+            formControlName="phone"
+            class="form-control"
+            placeholder="Enter your phone number"
+            [class.is-invalid]="hasError('phone', 'required') || hasError('phone', 'pattern')"
+          >
+          <div class="invalid-feedback" *ngIf="hasError('phone', 'required')">Phone is required.</div>
+          <div class="invalid-feedback" *ngIf="hasError('phone', 'pattern')">Must be 10 digits.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="country" class="form-label">Country*</label>
+          <select
+            id="country"
+            formControlName="country"
+            class="form-select"
+            [class.is-invalid]="hasError('country', 'required')"
+          >
+            <option value="" disabled>Select a country</option>
+            <option *ngFor="let country of countries" [value]="country.countryCode">
+              {{ country.countryName }}
+            </option>
+          </select>
+          <div class="invalid-feedback" *ngIf="hasError('country', 'required')">Country is required.</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="state" class="form-label">State*</label>
+          <select
+            id="state"
+            formControlName="state"
+            class="form-select"
+            [disabled]="!contactForm.get('country')?.value || states.length === 0"
+            [class.is-invalid]="hasError('state', 'required')"
+          >
+            <option value="" disabled>Select a state</option>
+            <option *ngFor="let state of states" [value]="state.stateId">{{ state.stateName }}</option>
+          </select>
+          <div class="invalid-feedback" *ngIf="hasError('state', 'required')">State is required.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12 mb-3">
+          <label for="message" class="form-label">Message*</label>
+          <textarea
+            id="message"
+            formControlName="message"
+            class="form-control"
+            rows="5"
+            placeholder="Please type your message here..."
+            [class.is-invalid]="hasError('message', 'required') || hasError('message', 'minlength')"
+          ></textarea>
+          <div class="invalid-feedback" *ngIf="hasError('message', 'required')">Message is required.</div>
+          <div class="invalid-feedback" *ngIf="hasError('message', 'minlength')">Minimum 10 characters.</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="submitting || !contactForm.valid">
+          <span *ngIf="!submitting">Submit</span>
+          <div class="spinner-border spinner-border-sm" *ngIf="submitting" role="status"></div>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

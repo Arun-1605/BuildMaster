@@ -1,0 +1,65 @@
+<div class="ai-assistant-container">
+  <div class="assistant-header">
+    <div class="header-title">
+      <div class="ai-icon">🤖</div>
+      <div>
+        <h1>AI Construction Assistant</h1>
+        <p>Powered by Ollama (Local AI) — Expert construction knowledge at your fingertips</p>
+      </div>
+    </div>
+    <div class="status-badge" [class.online]="isOllamaOnline" [class.offline]="!isOllamaOnline">
+      <span class="dot"></span>
+      {{ isOllamaOnline ? 'Ollama Online' : 'Ollama Offline' }}
+    </div>
+  </div>
+
+  <div class="assistant-body">
+    <!-- Quick Topics -->
+    <div class="quick-topics">
+      <p class="topics-label">Quick Topics:</p>
+      <div class="topics-grid">
+        <button *ngFor="let t of quickTopics" class="topic-btn" (click)="askQuickTopic(t.value)">
+          {{ t.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window" #chatContainer>
+      <div *ngFor="let msg of messages" class="message-row" [class.user-row]="msg.role === 'user'" [class.ai-row]="msg.role === 'assistant'">
+        <div class="avatar" [class.user-avatar]="msg.role === 'user'" [class.ai-avatar]="msg.role === 'assistant'">
+          {{ msg.role === 'user' ? '👤' : '🏗️' }}
+        </div>
+        <div class="bubble" [class.user-bubble]="msg.role === 'user'" [class.ai-bubble]="msg.role === 'assistant'">
+          <div class="msg-content" [innerHTML]="formatMessage(msg.content)"></div>
+          <div class="msg-time">{{ msg.timestamp | date:'HH:mm' }}</div>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="message-row ai-row">
+        <div class="avatar ai-avatar">🏗️</div>
+        <div class="bubble ai-bubble typing-bubble">
+          <span class="dot-flashing"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <textarea
+        [(ngModel)]="userInput"
+        (keydown)="onEnter($event)"
+        placeholder="Ask anything about construction... (Enter to send, Shift+Enter for new line)"
+        rows="2"
+        class="chat-input"
+        [disabled]="isLoading">
+      </textarea>
+      <div class="input-actions">
+        <button class="btn-clear" (click)="clearChat()" title="Clear chat">🗑️ Clear</button>
+        <button class="btn-send" (click)="sendMessage()" [disabled]="isLoading || !userInput.trim()">
+          {{ isLoading ? 'Thinking...' : 'Send ➤' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

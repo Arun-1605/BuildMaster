@@ -1,0 +1,190 @@
+<div class="admin-container">
+  <div class="admin-header">
+    <h1>⚙️ Admin Panel</h1>
+    <p class="admin-subtitle">Owner-only control centre</p>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-value">{{ users.length }}</span>
+      <span class="stat-label">Total Users</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ activeUsers }}</span>
+      <span class="stat-label">Active Users</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ premiumUsers }}</span>
+      <span class="stat-label">Premium Users</span>
+    </div>
+    <div class="stat-card" [class.enabled]="subscriptionEnabled">
+      <span class="stat-value">{{ subscriptionEnabled ? 'ON' : 'OFF' }}</span>
+      <span class="stat-label">Subscription Module</span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'settings'" (click)="activeTab = 'settings'">
+      🔧 Settings
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">
+      👥 Users
+    </button>
+  </div>
+
+  <!-- ── Settings Tab ─────────────────────────────────────── -->
+  <div *ngIf="activeTab === 'settings'" class="tab-content">
+
+    <div *ngIf="saveMsg"   class="alert alert-success">{{ saveMsg }}</div>
+    <div *ngIf="saveError" class="alert alert-danger">{{ saveError }}</div>
+
+    <div class="settings-section">
+      <h3>Subscription Module</h3>
+      <p class="section-desc">
+        Toggle whether the subscription system is active at all.
+        When disabled, all users get full access (free tier for all behaviour).
+      </p>
+
+      <div class="toggle-row">
+        <label class="toggle-label">
+          <input type="checkbox" [(ngModel)]="subscriptionEnabled" (change)="toggleSubscription()" />
+          <span class="toggle-slider"></span>
+          Enable Subscription Module
+        </label>
+        <span class="badge" [class.badge-green]="subscriptionEnabled" [class.badge-grey]="!subscriptionEnabled">
+          {{ subscriptionEnabled ? 'Enabled' : 'Disabled' }}
+        </span>
+      </div>
+
+      <div class="toggle-row" [class.dimmed]="!subscriptionEnabled">
+        <label class="toggle-label">
+          <input type="checkbox" [(ngModel)]="freeTierForAll" (change)="toggleFreeTier()"
+                 [disabled]="!subscriptionEnabled" />
+          <span class="toggle-slider"></span>
+          Free Tier for All (ignore individual subscriptions)
+        </label>
+        <span class="badge" [class.badge-green]="freeTierForAll" [class.badge-grey]="!freeTierForAll">
+          {{ freeTierForAll ? 'All Free' : 'Tiered' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- OTP Section -->
+    <div class="settings-section">
+      <h3>OTP / Phone Verification</h3>
+      <p class="section-desc">
+        When enabled, users must verify their phone number via OTP during sign-up.
+        Disable this if you haven't configured an SMS provider or want faster onboarding.
+      </p>
+      <div class="toggle-row">
+        <label class="toggle-label">
+          <input type="checkbox" [(ngModel)]="otpRequired" (change)="toggleOtp()" />
+          <span class="toggle-slider"></span>
+          Require OTP Verification on Sign-Up
+        </label>
+        <span class="badge" [class.badge-green]="otpRequired" [class.badge-grey]="!otpRequired">
+          {{ otpRequired ? 'Required' : 'Skipped' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Raw settings table -->
+    <div class="settings-section">
+      <h3>All Settings</h3>
+      <div *ngIf="loading" class="loading-text">Loading…</div>
+      <table *ngIf="!loading" class="admin-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+            <th>Updated By</th>
+            <th>Updated At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of settings">
+            <td class="key-cell">{{ s.key }}</td>
+            <td><span class="value-badge">{{ s.value }}</span></td>
+            <td>{{ s.updatedBy }}</td>
+            <td>{{ s.updatedAt | date:'short' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Users Tab ────────────────────────────────────────── -->
+  <div *ngIf="activeTab === 'users'" class="tab-content">
+    <div class="users-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>Subscription</th>
+            <th>Active</th>
+            <th>Phone ✓</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of users" [class.inactive-row]="!u.isActive">
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.name }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.phone || '—' }}</td>
+
+            <!-- Role selector -->
+            <td>
+              <select class="inline-select" [value]="u.role"
+                      (change)="setUserRole(u, $any($event.target).value)">
+                <option value="Owner">Owner</option>
+                <option value="Admin">Admin</option>
+                <option value="User">User</option>
+              </select>
+            </td>
+
+            <!-- Tier selector -->
+            <td>
+              <select class="inline-select" [value]="u.subscriptionTier"
+                      (change)="setUserTier(u, $any($event.target).value)">
+                <option value="Free">Free</option>
+                <option value="Premium">Premium</option>
+                <option value="Enterprise">Enterprise</option>
+              </select>
+            </td>
+
+            <td>
+              <button class="btn-sm"
+                      [class.btn-green]="u.isActive"
+                      [class.btn-red]="!u.isActive"
+                      (click)="toggleUserActive(u)">
+                {{ u.isActive ? 'Active' : 'Inactive' }}
+              </button>
+            </td>
+
+            <td>
+              <span [class.verified]="u.phoneVerified" [class.unverified]="!u.phoneVerified">
+                {{ u.phoneVerified ? '✓' : '✗' }}
+              </span>
+            </td>
+
+            <td>{{ u.lastLoginAt ? (u.lastLoginAt | date:'short') : 'Never' }}</td>
+
+            <td class="action-cell">
+              <!-- Extend future per-row actions here -->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

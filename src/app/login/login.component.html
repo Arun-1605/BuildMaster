@@ -1,0 +1,59 @@
+<div class="login-container">
+  <div class="login-card">
+    <h2 class="login-title">Welcome Back</h2>
+    <p class="login-subtitle">Please log in to your account</p>
+
+    <div *ngIf="errorMsg" class="error-message">{{ errorMsg }}</div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="form-control"
+          placeholder="Enter your username"
+        />
+        <div class="error-message" *ngIf="loginForm.get('username')?.touched && loginForm.get('username')?.invalid">
+          Username is required.
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="form-control"
+          placeholder="Enter your password"
+        />
+        <div class="error-message" *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid">
+          Password is required.
+        </div>
+      </div>
+
+      <!-- Login Button -->
+      <button type="submit" class="btn primary-btn" [disabled]="loginForm.invalid || submitting">
+        {{ submitting ? 'Logging in…' : 'Login' }}
+      </button>
+
+      <div style="text-align:right;margin-top:8px;">
+        <a routerLink="/forgot-password" style="color:#64748b;font-size:0.83rem;text-decoration:none;">Forgot password?</a>
+      </div>
+
+      <p class="login-footer">
+        Don't have an account?
+        <button class="btn secondary-btn" (click)="navigateToSignIn()">Sign In</button>
+      </p>
+
+    </form>
+
+    
+  
+
+  </div>
+</div>

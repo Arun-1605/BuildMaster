@@ -1,0 +1,90 @@
+<ng-container *ngIf="health && !health.isOnline && !dismissed">
+  <div class="ollama-banner">
+    <div class="banner-left">
+      <span class="dot offline"></span>
+      <strong>Ollama AI Offline</strong>
+      <span class="sep">—</span>
+      <span class="msg">AI features need Ollama running on this machine.</span>
+      <button class="btn-details" (click)="showDetails = !showDetails">
+        {{ showDetails ? 'Hide setup' : 'How to set up' }}
+      </button>
+    </div>
+    <div class="banner-right">
+      <button class="btn-recheck" (click)="recheck()" [disabled]="rechecking">
+        {{ rechecking ? '⏳ Checking...' : '↻ Re-check' }}
+      </button>
+      <button class="btn-dismiss" (click)="dismissed = true" title="Dismiss">✕</button>
+    </div>
+  </div>
+
+  <div class="setup-panel" *ngIf="showDetails">
+    <h3 class="setup-title">🤖 Ollama Setup Guide</h3>
+    <p class="setup-intro">
+      Ollama runs AI models locally on your machine — no cloud, no API key, full privacy.
+      Follow these steps to get it running:
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Download &amp; Install Ollama</strong>
+          <div class="step-os" *ngIf="os !== 'linux'">
+            <a [href]="downloadUrl" target="_blank" class="btn-download">
+              ⬇ Download for {{ os === 'windows' ? 'Windows' : 'macOS' }}
+            </a>
+            <span class="hint">Run the installer and follow the prompts.</span>
+          </div>
+          <div class="step-os" *ngIf="os === 'linux'">
+            <code class="code-block">{{ linuxCmd }}</code>
+            <span class="hint">Paste this in your terminal.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Pull the AI model</strong>
+          <code class="code-block">{{ pullCmd }}</code>
+          <span class="hint">Run in a terminal after Ollama is installed. Downloads ~4 GB.</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Start Ollama server</strong>
+          <code class="code-block">ollama serve</code>
+          <span class="hint">Keep this running. On Windows/Mac it auto-starts in the system tray.</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Come back and click Re-check</strong>
+          <button class="btn-recheck inline" (click)="recheck()" [disabled]="rechecking">
+            {{ rechecking ? '⏳ Checking...' : '↻ Re-check connection' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="available-models" *ngIf="health.availableModels.length > 0">
+      <strong>Detected models:</strong>
+      <span class="model-chip" *ngFor="let m of health.availableModels">{{ m }}</span>
+    </div>
+  </div>
+</ng-container>
+
+<ng-container *ngIf="health?.isOnline">
+  <div class="ollama-online-bar">
+    <span class="dot online"></span>
+    <strong>Ollama Online</strong>
+    <span class="sep">·</span>
+    <span>Model: <code>{{ health!.model }}</code></span>
+    <span *ngIf="health!.availableModels.length > 1" class="sep">·</span>
+    <span *ngIf="health!.availableModels.length > 1">{{ health!.availableModels.length }} models available</span>
+  </div>
+</ng-container>

@@ -1,0 +1,17 @@
+<div class="prompt-section">
+    <h2>Enter Your Requirements</h2>
+    <form (submit)="generatePlan()">
+      <textarea [(ngModel)]="userPrompt" name="prompt" placeholder="Get a Quote for your dream home now..." rows="4" required></textarea>
+      <button type="submit" class="generate-button">Submit your Requirement</button>
+    </form>
+  </div>
+  
+  <div class="plan-section" *ngIf="generatedPlan">
+    <h2>Generated Output</h2>
+    <div class="plan-view">
+      <!-- Check if the output is an image -->
+      <img *ngIf="isImage(generatedPlan)" [src]="generatedPlan" alt="Generated 2D Plan" />
+      <!-- Otherwise, display the text -->
+      <p *ngIf="!isImage(generatedPlan)">{{ generatedPlan }}</p>
+    </div>
+  </div>

@@ -1,0 +1,126 @@
+<div class="sign-in-container">
+  <div class="sign-in-card">
+    <h2 class="sign-in-title">Create Account</h2>
+    <p class="sign-in-subtitle">Join the BuildMaster family</p>
+
+    <!-- Success -->
+    <div *ngIf="successMsg" class="success-message">{{ successMsg }}</div>
+    <!-- Error -->
+    <div *ngIf="errorMsg && !successMsg" class="error-message">{{ errorMsg }}</div>
+
+    <!-- ── OTP Step ─────────────────────────────────────────────────── -->
+    <div *ngIf="step === 'otp'" class="otp-panel">
+      <p class="otp-info">Enter the 6-digit OTP sent to <strong>{{ signInForm.get('phone')?.value }}</strong></p>
+      <input
+        type="text"
+        class="form-control otp-input"
+        placeholder="Enter OTP"
+        maxlength="6"
+        [(ngModel)]="otpCode"
+        [ngModelOptions]="{standalone: true}"
+      />
+      <div *ngIf="otpError" class="error-message">{{ otpError }}</div>
+      <div class="otp-actions">
+        <button class="btn primary-btn" (click)="verifyOtp()" [disabled]="verifyingOtp">
+          {{ verifyingOtp ? 'Verifying…' : 'Verify OTP' }}
+        </button>
+        <button class="btn secondary-btn" (click)="sendOtp()" [disabled]="sendingOtp">
+          {{ sendingOtp ? 'Sending…' : 'Resend OTP' }}
+        </button>
+        <button class="btn text-btn" (click)="skipOtp()">Skip for now</button>
+      </div>
+    </div>
+
+    <!-- ── Registration Form ────────────────────────────────────────── -->
+    <form *ngIf="step === 'form'" [formGroup]="signInForm" (ngSubmit)="onSignIn()">
+
+      <!-- Username -->
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" formControlName="username" class="form-control" placeholder="Choose a username" />
+        <div class="error-message"
+             *ngIf="signInForm.get('username')?.touched && signInForm.get('username')?.invalid">
+          Username is required.
+        </div>
+      </div>
+
+      <!-- Name -->
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" formControlName="name" class="form-control" placeholder="Enter your full name" />
+        <div class="error-message"
+             *ngIf="signInForm.get('name')?.touched && signInForm.get('name')?.invalid">
+          Name is required.
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" formControlName="password" class="form-control" placeholder="Min. 6 characters" />
+        <div class="error-message"
+             *ngIf="signInForm.get('password')?.touched && signInForm.get('password')?.invalid">
+          Password must be at least 6 characters.
+        </div>
+      </div>
+
+      <!-- Phone + OTP -->
+      <div class="form-group">
+        <label class="form-label">
+          Mobile Number
+          <span *ngIf="phoneVerified" class="verified-badge">✓ Verified</span>
+        </label>
+        <div class="phone-row">
+          <input
+            type="text"
+            formControlName="phone"
+            class="form-control"
+            placeholder="+91 9999999999"
+            (blur)="onPhoneBlur()"
+          />
+          <button type="button" class="btn otp-btn" (click)="sendOtp()"
+                  [disabled]="sendingOtp || phoneExists || !signInForm.get('phone')?.value">
+            {{ otpSent ? 'Resend OTP' : 'Send OTP' }}
+          </button>
+        </div>
+        <div class="error-message" *ngIf="phoneExists">
+          This mobile number is already registered.
+        </div>
+      </div>
+
+      <!-- City -->
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input type="text" formControlName="city" class="form-control" placeholder="Your city" />
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input
+          type="email"
+          formControlName="email"
+          class="form-control"
+          placeholder="Enter your email"
+          (blur)="onEmailBlur()"
+        />
+        <div class="error-message"
+             *ngIf="signInForm.get('email')?.touched && signInForm.get('email')?.invalid">
+          A valid email is required.
+        </div>
+        <div class="error-message" *ngIf="emailExists">
+          This email is already registered.
+        </div>
+      </div>
+
+      <button type="submit" class="btn primary-btn"
+              [disabled]="signInForm.invalid || submitting || phoneExists || emailExists">
+        {{ submitting ? 'Creating account…' : 'Create Account' }}
+      </button>
+    </form>
+
+    <p class="sign-in-footer">
+      Already have an account? <a routerLink="/login">Login</a>
+    </p>
+  </div>
+</div>

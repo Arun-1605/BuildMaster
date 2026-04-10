@@ -1,0 +1,484 @@
+<div class="fp-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div class="fp-header">
+    <div>
+      <h1 class="fp-title">📐 Floor Plan Designer</h1>
+      <p class="fp-sub">Design realistic 2D plans with setbacks · Switch to 3D to visualise the build</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-ai" (click)="getAISuggestion()" [disabled]="aiLoading">
+        {{ aiLoading ? '⏳ Thinking...' : '🤖 AI Suggestion' }}
+      </button>
+      <button class="btn-save-design" (click)="openSaveModal()" title="Save design to cloud">
+        💾 {{ currentDesignId ? 'Update' : 'Save' }} Design
+      </button>
+      <button class="btn-load-design" (click)="showLoadModal=true; loadDesignList()" title="Load a saved design">
+        📂 Load Design
+        <span *ngIf="savedDesigns.length" class="design-count">{{ savedDesigns.length }}</span>
+      </button>
+      <button class="btn-outline" (click)="exportPNG()">🖼️ Export PNG</button>
+    </div>
+  </div>
+
+  <!-- ── Save Status Bar ────────────────────────────────────────── -->
+  <div *ngIf="saveMsg" class="save-status-bar success">{{ saveMsg }}</div>
+  <div *ngIf="saveErr && !showSaveModal" class="save-status-bar error">{{ saveErr }}</div>
+
+  <!-- ── AI Suggestion Panel ────────────────────────────────────── -->
+  <div class="ai-panel" *ngIf="aiSuggestion">
+    <div class="ai-badge">🤖 AI Recommendation</div>
+    <p class="ai-text">{{ aiSuggestion }}</p>
+  </div>
+
+  <!-- ── MAIN LAYOUT ────────────────────────────────────────────── -->
+  <div class="fp-layout">
+
+    <!-- ── LEFT: Config Panel ──────────────────────────────────── -->
+    <aside class="config-panel">
+
+      <!-- Unit Toggle -->
+      <div class="config-card">
+        <h3 class="config-title">📏 Unit System</h3>
+        <div class="unit-toggle">
+          <button [class.active]="unit === 'm'" (click)="unit = 'm'; draw2D()">m</button>
+          <button [class.active]="unit === 'ft'" (click)="unit = 'ft'; draw2D()">ft</button>
+        </div>
+        <p class="hint" style="margin-top:6px">All dimensions shown in selected unit. Internally stored in metres.</p>
+      </div>
+
+      <!-- Site Config -->
+      <div class="config-card">
+        <h3 class="config-title">🏗️ Site Configuration</h3>
+
+        <div class="field-group">
+          <label>Plot Width ({{ uL }})</label>
+          <input type="number" [ngModel]="toD(site.plotWidth)" (ngModelChange)="site.plotWidth = fromD($event); draw2D()"
+                 min="5" max="500" [step]="inputStep" />
+        </div>
+        <div class="field-group">
+          <label>Plot Depth ({{ uL }})</label>
+          <input type="number" [ngModel]="toD(site.plotDepth)" (ngModelChange)="site.plotDepth = fromD($event); draw2D()"
+                 min="5" max="500" [step]="inputStep" />
+        </div>
+        <div class="field-group">
+          <label>Plot Facing</label>
+          <select [(ngModel)]="site.facing" (ngModelChange)="draw2D()">
+            <option>North</option><option>South</option><option>East</option><option>West</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Number of Floors</label>
+          <input type="number" [(ngModel)]="site.floors" min="1" max="10"
+                 (ngModelChange)="onFloorsChange()" />
+        </div>
+        <div class="field-group">
+          <label>Floor Height ({{ uL }})</label>
+          <input type="number" [ngModel]="toD(site.floorHeight)" (ngModelChange)="site.floorHeight = fromD($event); draw2D()"
+                 min="2" max="30" [step]="inputStep" />
+        </div>
+      </div>
+
+      <!-- Setbacks -->
+      <div class="config-card setback-card">
+        <h3 class="config-title">📏 Setbacks <span class="hint">(statutory margins)</span></h3>
+        <div class="setback-grid">
+          <!-- North -->
+          <div></div>
+          <div class="field-group center">
+            <label>North ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(site.setbacks.north)" (ngModelChange)="site.setbacks.north = fromD($event); draw2D()"
+                   min="0" max="50" [step]="inputStep" class="sb-input" />
+          </div>
+          <div></div>
+
+          <!-- West / East -->
+          <div class="field-group center">
+            <label>West ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(site.setbacks.west)" (ngModelChange)="site.setbacks.west = fromD($event); draw2D()"
+                   min="0" max="50" [step]="inputStep" class="sb-input" />
+          </div>
+          <div class="plot-icon">🏠</div>
+          <div class="field-group center">
+            <label>East ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(site.setbacks.east)" (ngModelChange)="site.setbacks.east = fromD($event); draw2D()"
+                   min="0" max="50" [step]="inputStep" class="sb-input" />
+          </div>
+
+          <!-- South -->
+          <div></div>
+          <div class="field-group center">
+            <label>South ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(site.setbacks.south)" (ngModelChange)="site.setbacks.south = fromD($event); draw2D()"
+                   min="0" max="50" [step]="inputStep" class="sb-input" />
+          </div>
+          <div></div>
+        </div>
+
+        <div class="setback-info">
+          <span>Buildable: <strong>{{ toD(site.plotWidth - site.setbacks.east - site.setbacks.west) | number:'1.1-1' }}×
+            {{ toD(site.plotDepth - site.setbacks.north - site.setbacks.south) | number:'1.1-1' }} {{ uL }}</strong></span>
+          <span>Area: <strong>{{ buildableArea() * (unit === 'ft' ? FT * FT : 1) | number:'1.0-0' }} {{ uLSq }}</strong></span>
+        </div>
+      </div>
+
+      <!-- Add Room -->
+      <div class="config-card">
+        <h3 class="config-title">🧱 Add Room</h3>
+        <div class="field-group">
+          <label>Room Type</label>
+          <select [(ngModel)]="newRoom.type">
+            <option *ngFor="let t of ROOM_TYPES" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Width ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(newRoom.width)" (ngModelChange)="newRoom.width = fromD($event)"
+                   min="1" max="100" [step]="inputStep" />
+          </div>
+          <div class="field-group">
+            <label>Depth ({{ uL }})</label>
+            <input type="number" [ngModel]="toD(newRoom.depth)" (ngModelChange)="newRoom.depth = fromD($event)"
+                   min="1" max="100" [step]="inputStep" />
+          </div>
+        </div>
+        <div class="color-preview" [style.background]="ROOM_COLORS[newRoom.type]"></div>
+        <button class="btn-primary full-width" (click)="addRoom()">+ Add Room to Floor {{ activeFloor + 1 }}</button>
+      </div>
+
+      <!-- Quick Presets -->
+      <div class="config-card">
+        <h3 class="config-title">⚡ Quick Presets</h3>
+        <div class="preset-grid">
+          <button class="preset-btn" (click)="applyAIPreset('Studio')">Studio</button>
+          <button class="preset-btn" (click)="applyAIPreset('2BHK')">2 BHK</button>
+          <button class="preset-btn" (click)="applyAIPreset('3BHK')">3 BHK</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Auto-arranges rooms — adjust positions after applying.</p>
+      </div>
+
+      <!-- Floor Stats -->
+      <div class="config-card stats-card">
+        <h3 class="config-title">📊 Floor Stats</h3>
+        <div class="stat-row">
+          <span>Plot Area</span>
+          <strong>{{ toD(site.plotWidth) * toD(site.plotDepth) | number:'1.0-0' }} {{ uLSq }}</strong>
+        </div>
+        <div class="stat-row">
+          <span>Buildable Area</span>
+          <strong>{{ buildableArea() * (unit === 'ft' ? FT * FT : 1) | number:'1.0-0' }} {{ uLSq }}</strong>
+        </div>
+        <div class="stat-row">
+          <span>Built Area (Floor {{ activeFloor+1 }})</span>
+          <strong>{{ totalBuiltArea() * (unit === 'ft' ? FT * FT : 1) | number:'1.0-0' }} {{ uLSq }}</strong>
+        </div>
+        <div class="stat-row"><span>Coverage %</span>
+          <strong [class.over]="totalBuiltArea() > buildableArea()">
+            {{ buildableArea() > 0 ? (totalBuiltArea() / buildableArea() * 100 | number:'1.0-0') : 0 }}%
+          </strong>
+        </div>
+        <div class="stat-row"><span>Rooms on this floor</span><strong>{{ currentFloor ? currentFloor.rooms.length : 0 }}</strong></div>
+      </div>
+
+    </aside>
+
+    <!-- ── RIGHT: Canvas Area ───────────────────────────────────── -->
+    <main class="canvas-area">
+
+      <!-- Floor tabs -->
+      <div class="floor-tabs">
+        <button *ngFor="let f of floors; let i = index"
+                class="floor-tab"
+                [class.active]="activeFloor === i"
+                (click)="activeFloor = i; draw2D()">
+          Floor {{ i + 1 }}
+        </button>
+      </div>
+
+      <!-- 3-button view switch: 2D / Elevation / 3D -->
+      <div class="view-switch">
+        <button class="view-tab" [class.active]="activeView === '2d'" (click)="switchView('2d')">📐 2D Plan</button>
+        <button class="view-tab" [class.active]="activeView === 'elev'" (click)="switchView('elev')">📊 Elevation</button>
+        <button class="view-tab" [class.active]="activeView === '3d'" (click)="switchView('3d')">🧊 3D View</button>
+        <button class="icon-btn" *ngIf="activeView === '3d'" (click)="reset3DCamera()" title="Reset camera">⟳</button>
+      </div>
+
+      <!-- 2D Canvas -->
+      <ng-container *ngIf="activeView === '2d'">
+
+        <!-- Placement mode toolbar -->
+        <div class="place-toolbar">
+          <span class="place-label">Draw Mode:</span>
+          <button class="place-btn" [class.active]="placeMode === 'move'"
+                  (click)="placeMode = 'move'; draw2D()" title="Drag rooms">
+            ✋ Move Rooms
+          </button>
+          <button class="place-btn" [class.active]="placeMode === 'column'"
+                  (click)="placeMode = 'column'; draw2D()" title="Click to place a structural column">
+            🔲 Column
+          </button>
+          <button class="place-btn" [class.active]="placeMode === 'window'"
+                  (click)="placeMode = 'window'; draw2D()" title="Click near a room wall to add a window">
+            🪟 Window
+          </button>
+          <button class="place-btn" [class.active]="placeMode === 'door'"
+                  (click)="placeMode = 'door'; draw2D()" title="Click near a room wall to place a door with swing arc">
+            🚪 Door
+          </button>
+          <button class="place-btn delete-btn" [class.active]="placeMode === 'delete'"
+                  (click)="placeMode = 'delete'; draw2D()" title="Click a column, window or door to remove it">
+            🗑️ Delete
+          </button>
+          <span class="place-counts" *ngIf="currentFloor">
+            {{ currentFloor.columns.length }} col · {{ currentFloor.windows.length }} win · {{ currentFloor.doors.length }} doors
+          </span>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas #canvas2d class="plan-canvas"
+            (mousedown)="onCanvasMouseDown($event)"
+            (mousemove)="onCanvasMouseMove($event)"
+            (mouseup)="onCanvasMouseUp($event)"
+            (mouseleave)="onCanvasMouseUp($event)"
+            (touchstart)="onCanvasTouchStart($event)"
+            (touchmove)="onCanvasTouchMove($event)"
+            (touchend)="onCanvasMouseUp($event)">
+          </canvas>
+          <div class="drag-hint">
+            <ng-container [ngSwitch]="placeMode">
+              <span *ngSwitchCase="'move'">✋ Drag rooms · Snaps to {{ unit === 'ft' ? '1 ft' : '0.5 m' }} · Dots = Vastu</span>
+              <span *ngSwitchCase="'column'">🔲 Click anywhere to place a column · 0.5 m grid snap</span>
+              <span *ngSwitchCase="'window'">🪟 Click near a room wall edge to place a window opening</span>
+              <span *ngSwitchCase="'door'">🚪 Click near a room wall to place a door — a swing arc shows direction</span>
+              <span *ngSwitchCase="'delete'">🗑️ Click on a column, window or door symbol to remove it</span>
+            </ng-container>
+          </div>
+        <div class="canvas-legend">
+          <div class="legend-item" *ngFor="let t of ROOM_TYPES">
+            <span class="legend-dot" [style.background]="ROOM_COLORS[t]"></span>
+            <span>{{ t }}</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot setback"></span><span>Setback Zone</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#22c55e;border-radius:50%"></span><span>Vastu Good</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#eab308;border-radius:50%"></span><span>Vastu Check</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#ef4444;border-radius:50%"></span><span>Vastu Violation</span>
+          </div>
+        </div>
+        </div><!-- /canvas-wrap -->
+      </ng-container><!-- /activeView === '2d' -->
+
+      <!-- Elevation Canvas (Front + Top sub-tabs) -->
+      <ng-container *ngIf="activeView === 'elev'">
+        <!-- Sub-tab bar -->
+        <div class="elev-sub-tabs">
+          <button class="elev-sub-btn" [class.active]="elevSubView === 'front'" (click)="switchElevSub('front')">
+            🏛️ Front Elevation
+          </button>
+          <button class="elev-sub-btn" [class.active]="elevSubView === 'top'" (click)="switchElevSub('top')">
+            🗺️ Top Elevation
+          </button>
+        </div>
+
+        <!-- Front Elevation canvas -->
+        <div class="canvas-wrap elev-canvas" *ngIf="elevSubView === 'front'">
+          <canvas #canvasElev class="plan-canvas"></canvas>
+          <div class="drag-hint">🏛️ Front ({{ site.facing }}-facing) facade elevation</div>
+        </div>
+
+        <!-- Top Elevation canvas -->
+        <div class="canvas-wrap top-elev-canvas" *ngIf="elevSubView === 'top'">
+          <canvas #canvasTopElev class="plan-canvas"></canvas>
+          <div class="drag-hint">🗺️ Top elevation (roof plan) — showing room footprints and parapet</div>
+        </div>
+      </ng-container>
+
+      <!-- 3D Floor selector -->
+      <div class="floor-3d-select" *ngIf="activeView === '3d'">
+        <button [class.active]="activeFloor3D === 'all'" (click)="setFloor3D('all')">All Floors</button>
+        <button *ngFor="let f of floors; let i = index"
+                [class.active]="activeFloor3D === i"
+                (click)="setFloor3D(i)">Floor {{ i + 1 }}</button>
+      </div>
+
+      <!-- 3D Canvas -->
+      <div class="canvas-wrap three-wrap" *ngIf="activeView === '3d'">
+        <canvas #canvas3d class="three-canvas"></canvas>
+        <div class="three-hint">🖱️ Drag to rotate · Scroll to zoom</div>
+        <!-- Camera Tour controls -->
+        <div class="tour-controls">
+          <button *ngIf="!tourActive" class="btn-tour" (click)="startTour()">▶ Camera Tour</button>
+          <ng-container *ngIf="tourActive">
+            <button class="btn-tour" (click)="pauseTour()">{{ tourPaused ? '▶ Resume' : '⏸ Pause' }}</button>
+            <button class="btn-tour stop" (click)="stopTour()">⏹ Stop</button>
+            <span class="tour-progress">{{ (tourT * 100) | number:'1.0-0' }}%</span>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Room list for current floor -->
+      <div class="room-list-section" *ngIf="currentFloor && currentFloor.rooms.length > 0">
+        <h3 class="config-title" style="margin-bottom:12px">Floor {{ activeFloor + 1 }} — Placed Rooms</h3>
+        <div class="room-table-wrap">
+          <table class="room-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Room</th>
+                <th>W ({{ uL }})</th>
+                <th>D ({{ uL }})</th>
+                <th>X pos</th>
+                <th>Y pos</th>
+                <th>Area {{ uLSq }}</th>
+                <th>Move</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let room of currentFloor.rooms">
+                <td><span class="room-color-dot" [style.background]="room.color"></span></td>
+                <td><strong>{{ room.name }}</strong></td>
+                <td>
+                  <input type="number" [ngModel]="toD(room.width)" (ngModelChange)="room.width = fromD($event); updateRoom(room)"
+                         min="1" max="200" [step]="inputStep" class="room-input" />
+                </td>
+                <td>
+                  <input type="number" [ngModel]="toD(room.depth)" (ngModelChange)="room.depth = fromD($event); updateRoom(room)"
+                         min="1" max="200" [step]="inputStep" class="room-input" />
+                </td>
+                <td>
+                  <input type="number" [ngModel]="toD(room.x)" (ngModelChange)="room.x = fromD($event); updateRoom(room)"
+                         min="0" [step]="inputStep" class="room-input" />
+                </td>
+                <td>
+                  <input type="number" [ngModel]="toD(room.y)" (ngModelChange)="room.y = fromD($event); updateRoom(room)"
+                         min="0" [step]="inputStep" class="room-input" />
+                </td>
+                <td class="num-cell">{{ (room.width * room.depth * (unit === 'ft' ? FT * FT : 1)) | number:'1.1-1' }}</td>
+                <td>
+                  <div class="move-btns">
+                    <button (click)="moveRoom(room, 0, 0.3)"  title="North">↑</button>
+                    <button (click)="moveRoom(room, 0, -0.3)" title="South">↓</button>
+                    <button (click)="moveRoom(room, -0.3, 0)" title="West">←</button>
+                    <button (click)="moveRoom(room, 0.3, 0)"  title="East">→</button>
+                  </div>
+                </td>
+                <td>
+                  <button class="del-room" (click)="removeRoom(room.id)" title="Remove">✕</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Vastu Analysis Panel ────────────────────────────────── -->
+      <div class="vastu-panel" *ngIf="currentFloor && currentFloor.rooms.length > 0">
+        <div class="vastu-header">
+          <h3 class="config-title" style="margin:0">🕉️ Vastu Analysis</h3>
+          <div class="vastu-score">
+            <span class="score-label">Score:</span>
+            <span class="score-value"
+              [class.score-good]="vastuGoodCount() === vastuTotalCount()"
+              [class.score-warn]="vastuGoodCount() > 0 && vastuGoodCount() < vastuTotalCount()"
+              [class.score-bad]="vastuGoodCount() === 0">
+              {{ vastuGoodCount() }} / {{ vastuTotalCount() }} rooms correctly placed
+            </span>
+          </div>
+        </div>
+
+        <div class="vastu-rows">
+          <div class="vastu-row" *ngFor="let room of currentFloor.rooms">
+            <div class="vastu-room-info">
+              <span class="room-color-dot" [style.background]="room.color"></span>
+              <strong class="vastu-room-name">{{ room.name }}</strong>
+              <span class="vastu-zone">Zone: <em>{{ getRoomZone(room) }}</em></span>
+            </div>
+            <div class="vastu-right">
+              <span class="vastu-badge"
+                [class.good]="vastuStatus(room) === 'good'"
+                [class.warn]="vastuStatus(room) === 'warn'"
+                [class.bad]="vastuStatus(room) === 'bad'">
+                <ng-container *ngIf="vastuStatus(room) === 'good'">✓ Good</ng-container>
+                <ng-container *ngIf="vastuStatus(room) === 'warn'">⚠ Check</ng-container>
+                <ng-container *ngIf="vastuStatus(room) === 'bad'">✗ Violation</ng-container>
+              </span>
+              <span class="vastu-msg">{{ vastuMessage(room) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="vastu-legend-row">
+          <span class="vastu-badge good">✓ Good</span> Ideal zone &nbsp;
+          <span class="vastu-badge warn">⚠ Check</span> Adjacent zone (acceptable) &nbsp;
+          <span class="vastu-badge bad">✗ Violation</span> Wrong zone
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+<!-- ── SAVE DESIGN MODAL ───────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showSaveModal" (click)="showSaveModal=false">
+  <div class="fp-modal" (click)="$event.stopPropagation()">
+    <h3 class="modal-title">💾 {{ currentDesignId ? 'Update' : 'Save' }} Design</h3>
+
+    <div class="fp-field">
+      <label>Design Name</label>
+      <input type="text" [(ngModel)]="designName" placeholder="My Floor Plan" maxlength="100" />
+    </div>
+
+    <div *ngIf="currentDesignId" class="fp-notice">
+      This will overwrite the previously saved version of "{{ designName }}".
+    </div>
+
+    <div *ngIf="saveErr" class="fp-alert error">{{ saveErr }}</div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showSaveModal=false">Cancel</button>
+      <button class="btn-confirm" (click)="saveDesign()" [disabled]="saveLoading">
+        {{ saveLoading ? 'Saving...' : (currentDesignId ? 'Update' : 'Save') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOAD DESIGN MODAL ───────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showLoadModal" (click)="showLoadModal=false">
+  <div class="fp-modal fp-modal-wide" (click)="$event.stopPropagation()">
+    <h3 class="modal-title">📂 Load Saved Design</h3>
+
+    <div *ngIf="!savedDesigns.length" class="fp-empty">
+      No saved designs yet. Design something and click "Save Design".
+    </div>
+
+    <div class="saved-design-list">
+      <div *ngFor="let d of savedDesigns" class="saved-design-row"
+           (click)="loadDesign(d.id)"
+           [class.active]="currentDesignId === d.id">
+        <div class="sd-icon">📐</div>
+        <div class="sd-info">
+          <div class="sd-name">{{ d.name }}</div>
+          <div class="sd-meta">
+            {{ (d.updatedAt ?? d.createdAt) | date:'dd MMM yyyy, h:mm a' }}
+            <span *ngIf="currentDesignId === d.id" class="sd-current">● Current</span>
+          </div>
+        </div>
+        <button class="sd-delete" (click)="deleteDesign(d.id, $event)" title="Delete">🗑</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="showLoadModal=false">Close</button>
+    </div>
+  </div>
+</div>

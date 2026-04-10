@@ -1,0 +1,475 @@
+<div class="portal-wrapper">
+
+  <!-- ═══════════════════════  LOGIN  ═══════════════════════ -->
+  <div *ngIf="view === 'login'" class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-icon">🏗️</div>
+        <h2>Supplier Portal</h2>
+        <p>BuildMaster CMS — Vendor Access</p>
+      </div>
+
+      <div class="login-body">
+        <!-- Auth mode toggle -->
+        <div class="auth-mode-toggle">
+          <button [class.active]="loginMode === 'password'"
+                  (click)="loginMode = 'password'; loginError = ''">
+            Password Login
+          </button>
+          <button [class.active]="loginMode === 'accessCode'"
+                  (click)="loginMode = 'accessCode'; loginError = ''">
+            Access Code
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Registered Email</label>
+          <input type="email" [(ngModel)]="loginForm.email"
+                 placeholder="your@company.com"
+                 (keyup.enter)="login()" />
+        </div>
+
+        <!-- Password mode -->
+        <div *ngIf="loginMode === 'password'" class="form-group">
+          <label>Password</label>
+          <input type="password" [(ngModel)]="loginForm.password"
+                 placeholder="Your password"
+                 (keyup.enter)="login()" />
+          <small class="hint">For self-registered supplier accounts.</small>
+        </div>
+
+        <!-- Access code mode -->
+        <div *ngIf="loginMode === 'accessCode'" class="form-group">
+          <label>Access Code</label>
+          <input type="text" [(ngModel)]="loginForm.accessCode"
+                 placeholder="e.g. SUP-0001"
+                 (keyup.enter)="login()"
+                 style="text-transform:uppercase; letter-spacing:2px;" />
+          <small class="hint">Your access code was shared by the procurement team.</small>
+        </div>
+
+        <div *ngIf="loginError" class="alert alert-error">{{ loginError }}</div>
+
+        <button class="btn-login" (click)="login()" [disabled]="loading">
+          <span *ngIf="!loading">Sign In</span>
+          <span *ngIf="loading" class="spinner-sm"></span>
+        </button>
+
+        <div class="enroll-link">
+          New supplier? <a (click)="showEnroll()">Register your company</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════  ENROLL  ═══════════════════════ -->
+  <div *ngIf="view === 'enroll'" class="login-container">
+    <div class="login-card enroll-card">
+      <div class="login-header">
+        <div class="logo-icon">🏗️</div>
+        <h2>Supplier Registration</h2>
+        <p>Create your BuildMaster supplier account</p>
+      </div>
+
+      <div class="login-body">
+        <!-- Success state -->
+        <div *ngIf="enrollSuccess" class="enroll-success">
+          <div class="success-icon">✅</div>
+          <h4>Registration Submitted!</h4>
+          <p>{{ enrollSuccess }}</p>
+          <button class="btn-login" (click)="showLogin()">Back to Login</button>
+        </div>
+
+        <!-- Enrollment form -->
+        <div *ngIf="!enrollSuccess">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Company Name *</label>
+              <input type="text" [(ngModel)]="enrollForm.companyName"
+                     placeholder="ABC Builders Pvt. Ltd." />
+            </div>
+            <div class="form-group">
+              <label>Contact Person *</label>
+              <input type="text" [(ngModel)]="enrollForm.contactPerson"
+                     placeholder="Full name" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Business Email *</label>
+              <input type="email" [(ngModel)]="enrollForm.email"
+                     placeholder="your@company.com" />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="tel" [(ngModel)]="enrollForm.phone"
+                     placeholder="+91 98765 43210" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Category / Specialization</label>
+            <select [(ngModel)]="enrollForm.category">
+              <option value="">— Select category —</option>
+              <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Address</label>
+            <input type="text" [(ngModel)]="enrollForm.address"
+                   placeholder="Street address" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" [(ngModel)]="enrollForm.city" placeholder="City" />
+            </div>
+            <div class="form-group">
+              <label>State</label>
+              <input type="text" [(ngModel)]="enrollForm.state" placeholder="State" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Password *</label>
+              <input type="password" [(ngModel)]="enrollForm.password"
+                     placeholder="Min. 8 characters" />
+            </div>
+            <div class="form-group">
+              <label>Confirm Password *</label>
+              <input type="password" [(ngModel)]="enrollForm.confirmPassword"
+                     placeholder="Re-enter password" />
+            </div>
+          </div>
+
+          <div *ngIf="enrollError" class="alert alert-error">{{ enrollError }}</div>
+
+          <button class="btn-login" (click)="register()" [disabled]="loading">
+            <span *ngIf="!loading">Submit Registration</span>
+            <span *ngIf="loading" class="spinner-sm"></span>
+          </button>
+
+          <div class="enroll-link">
+            Already have an account? <a (click)="showLogin()">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════  DASHBOARD  ═══════════════════════ -->
+  <div *ngIf="view === 'dashboard'" class="dashboard-container">
+
+    <!-- Top bar -->
+    <header class="dash-header">
+      <div class="dash-brand">
+        <span class="brand-icon">🏗️</span>
+        <span class="brand-name">Supplier Portal</span>
+      </div>
+      <div class="dash-user">
+        <span class="supplier-badge">{{ supplierInfo?.supplierCode }}</span>
+        <span class="supplier-name">{{ supplierInfo?.companyName }}</span>
+        <button class="btn-logout" (click)="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="dash-body">
+
+      <!-- Sidebar tabs -->
+      <nav class="dash-sidebar">
+        <button class="side-tab" [class.active]="activeTab === 'rfqs' && !selectedRfq"
+                (click)="activeTab = 'rfqs'; backToList()">
+          <span class="tab-icon">📋</span> My RFQs
+          <span *ngIf="rfqs.length" class="tab-count">{{ rfqs.length }}</span>
+        </button>
+        <button class="side-tab" [class.active]="activeTab === 'profile'"
+                (click)="activeTab = 'profile'; backToList()">
+          <span class="tab-icon">🏢</span> My Profile
+        </button>
+      </nav>
+
+      <!-- Main content -->
+      <main class="dash-main">
+
+        <!-- ── RFQ LIST ── -->
+        <ng-container *ngIf="activeTab === 'rfqs' && !selectedRfq">
+          <div class="section-header">
+            <h3>📋 Incoming RFQs</h3>
+            <button class="btn-refresh" (click)="loadRFQs()">↻ Refresh</button>
+          </div>
+
+          <div *ngIf="rfqError" class="alert alert-error">{{ rfqError }}</div>
+
+          <div *ngIf="rfqs.length === 0 && !rfqError" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No RFQs received yet.</p>
+            <small>When the procurement team sends you a quote request, it will appear here.</small>
+          </div>
+
+          <div class="rfq-grid">
+            <div *ngFor="let rfq of rfqs" class="rfq-card" (click)="openRFQ(rfq)">
+              <div class="rfq-card-top">
+                <span class="rfq-number">{{ rfq.rfqNumber }}</span>
+                <span class="badge" [ngClass]="statusClass(rfq.myStatus)">{{ rfq.myStatus }}</span>
+              </div>
+              <div class="rfq-project">{{ rfq.projectName || 'General RFQ' }}</div>
+              <div class="rfq-subject">{{ rfq.subject }}</div>
+              <div class="rfq-meta">
+                <span>📦 {{ rfq.itemCount }} item{{ rfq.itemCount !== 1 ? 's' : '' }}</span>
+                <span>📅 Due: {{ formatDate(rfq.requiredByDate) }}</span>
+              </div>
+              <div class="rfq-footer">
+                <span *ngIf="rfq.isSelected" class="selected-badge">🏆 Selected</span>
+                <span *ngIf="rfq.hasResponded && !rfq.isSelected" class="responded-badge">✅ Quote Submitted</span>
+                <span *ngIf="!rfq.hasResponded" class="pending-badge">⏳ Awaiting Your Quote</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ── RFQ DETAIL ── -->
+        <ng-container *ngIf="activeTab === 'rfqs' && selectedRfq">
+          <div class="section-header">
+            <button class="btn-back" (click)="backToList()">← Back to RFQs</button>
+            <h3>{{ selectedRfq.rfqNumber }}</h3>
+            <span class="badge" [ngClass]="statusClass(selectedRfq.myStatus)">{{ selectedRfq.myStatus }}</span>
+          </div>
+
+          <!-- RFQ Meta -->
+          <div class="detail-card">
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Project</label>
+                <span>{{ selectedRfq.projectName || '—' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Subject</label>
+                <span>{{ selectedRfq.subject }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Request Date</label>
+                <span>{{ formatDate(selectedRfq.requestDate) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Required By</label>
+                <span class="highlight">{{ formatDate(selectedRfq.requiredByDate) }}</span>
+              </div>
+              <div class="detail-item" *ngIf="selectedRfq.deliveryAddress">
+                <label>Delivery Address</label>
+                <span>{{ selectedRfq.deliveryAddress }}</span>
+              </div>
+              <div class="detail-item" *ngIf="selectedRfq.totalBudget">
+                <label>Budget</label>
+                <span>{{ formatCurrency(selectedRfq.totalBudget) }}</span>
+              </div>
+            </div>
+            <div *ngIf="selectedRfq.notes" class="rfq-notes">
+              <label>Notes</label>
+              <p>{{ selectedRfq.notes }}</p>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="items-card">
+            <h4>📦 Items Required</h4>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Material</th>
+                  <th>Description</th>
+                  <th>Unit</th>
+                  <th>Qty</th>
+                  <th>Target Price</th>
+                  <th>Specifications</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of selectedRfq.items; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td><strong>{{ item.materialName }}</strong></td>
+                  <td>{{ item.description || '—' }}</td>
+                  <td>{{ item.unit }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.targetPrice ? formatCurrency(item.targetPrice) : '—' }}</td>
+                  <td>{{ item.specifications || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Winner badge -->
+          <div *ngIf="selectedRfq.isSelected" class="winner-banner">
+            🏆 Congratulations! Your quote was selected for this RFQ.
+            <span *ngIf="selectedRfq.selectionReason"> Reason: {{ selectedRfq.selectionReason }}</span>
+          </div>
+
+          <!-- Existing Response -->
+          <div *ngIf="selectedRfq.myResponse" class="response-card submitted">
+            <h4>✅ Your Submitted Quote</h4>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Total Offered Amount</label>
+                <span class="amount-highlight">{{ formatCurrency(selectedRfq.myResponse.totalOfferedAmount) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Lead Time</label>
+                <span>{{ selectedRfq.myResponse.leadTimeDays ? selectedRfq.myResponse.leadTimeDays + ' days' : '—' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Valid Until</label>
+                <span>{{ formatDate(selectedRfq.myResponse.validUntil) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Submitted On</label>
+                <span>{{ formatDate(selectedRfq.myResponse.responseDate) }}</span>
+              </div>
+              <div class="detail-item" *ngIf="selectedRfq.myResponse.deliveryTerms">
+                <label>Delivery Terms</label>
+                <span>{{ selectedRfq.myResponse.deliveryTerms }}</span>
+              </div>
+              <div class="detail-item" *ngIf="selectedRfq.myResponse.paymentTerms">
+                <label>Payment Terms</label>
+                <span>{{ selectedRfq.myResponse.paymentTerms }}</span>
+              </div>
+            </div>
+            <div *ngIf="selectedRfq.myResponse.supplierComments" class="rfq-notes">
+              <label>Your Comments</label>
+              <p>{{ selectedRfq.myResponse.supplierComments }}</p>
+            </div>
+          </div>
+
+          <!-- Submit Response Form -->
+          <div *ngIf="!selectedRfq.myResponse && selectedRfq.myStatus !== 'Selected' && selectedRfq.myStatus !== 'Rejected'" class="response-card">
+            <div *ngIf="!showResponseForm" class="response-cta">
+              <p>Ready to submit your quote for this RFQ?</p>
+              <button class="btn-primary" (click)="showResponseForm = true">📝 Submit Quote</button>
+            </div>
+
+            <div *ngIf="showResponseForm">
+              <h4>📝 Submit Your Quote</h4>
+
+              <div *ngIf="responseError" class="alert alert-error">{{ responseError }}</div>
+              <div *ngIf="responseSuccess" class="alert alert-success">{{ responseSuccess }}</div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Total Offered Amount (₹) *</label>
+                  <input type="number" [(ngModel)]="responseForm.totalOfferedAmount"
+                         placeholder="Enter total quote amount" min="1" />
+                </div>
+                <div class="form-group">
+                  <label>Lead Time (days)</label>
+                  <input type="number" [(ngModel)]="responseForm.leadTimeDays"
+                         placeholder="e.g. 7" min="1" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Quote Valid Until</label>
+                  <input type="date" [(ngModel)]="responseForm.validUntil" />
+                </div>
+                <div class="form-group">
+                  <label>Delivery Terms</label>
+                  <input type="text" [(ngModel)]="responseForm.deliveryTerms"
+                         placeholder="e.g. Ex-works, FOR destination" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Payment Terms</label>
+                <input type="text" [(ngModel)]="responseForm.paymentTerms"
+                       placeholder="e.g. 30 days credit, advance 20%" />
+              </div>
+
+              <div class="form-group">
+                <label>Additional Comments</label>
+                <textarea [(ngModel)]="responseForm.supplierComments"
+                          rows="3"
+                          placeholder="Any notes, conditions or remarks..."></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn-secondary" (click)="showResponseForm = false">Cancel</button>
+                <button class="btn-primary" (click)="submitResponse()" [disabled]="loading">
+                  <span *ngIf="!loading">Submit Quote</span>
+                  <span *ngIf="loading" class="spinner-sm"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ── PROFILE ── -->
+        <ng-container *ngIf="activeTab === 'profile'">
+          <div class="section-header">
+            <h3>🏢 Company Profile</h3>
+          </div>
+
+          <div *ngIf="!profile" class="loading-state">Loading profile...</div>
+
+          <div *ngIf="profile" class="profile-card">
+            <div class="profile-header">
+              <div class="profile-avatar">{{ profile.companyName?.[0] | uppercase }}</div>
+              <div>
+                <h4>{{ profile.companyName }}</h4>
+                <p>{{ profile.category }} &bull; {{ profile.city }}, {{ profile.state }}</p>
+                <div class="rating-stars">
+                  <span *ngFor="let s of [1,2,3,4,5]" [class.filled]="s <= profile.rating">★</span>
+                  <small>{{ profile.rating | number:'1.1-1' }} / 5 ({{ profile.totalOrders }} orders)</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-sections">
+              <div class="profile-section">
+                <h5>Contact Information</h5>
+                <div class="detail-grid">
+                  <div class="detail-item"><label>Contact Person</label><span>{{ profile.contactPerson }}</span></div>
+                  <div class="detail-item"><label>Email</label><span>{{ profile.email }}</span></div>
+                  <div class="detail-item"><label>Phone</label><span>{{ profile.phone || '—' }}</span></div>
+                  <div class="detail-item"><label>WhatsApp</label><span>{{ profile.whatsAppNumber || '—' }}</span></div>
+                </div>
+              </div>
+
+              <div class="profile-section">
+                <h5>Address</h5>
+                <div class="detail-grid">
+                  <div class="detail-item"><label>Address</label><span>{{ profile.address || '—' }}</span></div>
+                  <div class="detail-item"><label>City</label><span>{{ profile.city }}</span></div>
+                  <div class="detail-item"><label>State</label><span>{{ profile.state }}</span></div>
+                  <div class="detail-item"><label>Country</label><span>{{ profile.country }}</span></div>
+                </div>
+              </div>
+
+              <div class="profile-section">
+                <h5>Business Details</h5>
+                <div class="detail-grid">
+                  <div class="detail-item"><label>Supplier Code</label><span class="code-badge">{{ profile.supplierCode }}</span></div>
+                  <div class="detail-item"><label>GST Number</label><span>{{ profile.gstNumber || '—' }}</span></div>
+                  <div class="detail-item"><label>PAN</label><span>{{ profile.pan || '—' }}</span></div>
+                </div>
+              </div>
+
+              <div class="profile-section" *ngIf="profile.bankName">
+                <h5>Banking Details</h5>
+                <div class="detail-grid">
+                  <div class="detail-item"><label>Bank</label><span>{{ profile.bankName }}</span></div>
+                  <div class="detail-item"><label>Account</label><span>{{ profile.accountNumber }}</span></div>
+                  <div class="detail-item"><label>IFSC</label><span>{{ profile.ifsc }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+      </main>
+    </div>
+  </div>
+
+</div>

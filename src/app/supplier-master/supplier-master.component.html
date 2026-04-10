@@ -1,0 +1,231 @@
+<div class="sm-page">
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <div class="sm-header">
+    <div>
+      <h1 class="sm-title">🏭 Supplier Master</h1>
+      <p class="sm-sub">Manage material suppliers — ratings, categories, and contact info.</p>
+    </div>
+    <button class="btn-primary" (click)="openCreate()">+ Add Supplier</button>
+  </div>
+
+  <!-- ── Alerts ─────────────────────────────────────── -->
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+  <div class="alert alert-error"   *ngIf="error && !showForm">{{ error }}</div>
+
+  <!-- ── Add / Edit Form ───────────────────────────── -->
+  <div class="form-card" *ngIf="showForm">
+    <div class="form-card-header">
+      <h2>{{ editMode ? '✏️ Edit Supplier' : '➕ New Supplier' }}</h2>
+      <button class="btn-close" (click)="closeForm()">✕</button>
+    </div>
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+
+        <div class="form-section">
+          <h3 class="section-label">Company Info</h3>
+          <div class="field-group">
+            <label>Company Name *</label>
+            <input formControlName="companyName" placeholder="ABC Cement Traders" />
+            <span class="err" *ngIf="f['companyName'].touched && f['companyName'].invalid">Required</span>
+          </div>
+          <div class="field-group">
+            <label>Contact Person</label>
+            <input formControlName="contactPerson" placeholder="Rajesh Kumar" />
+          </div>
+          <div class="field-group">
+            <label>Category *</label>
+            <select formControlName="category">
+              <option value="">— Select —</option>
+              <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            </select>
+            <span class="err" *ngIf="f['category'].touched && f['category'].invalid">Required</span>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Phone</label>
+              <input formControlName="phone" placeholder="+91 99999 00000" />
+            </div>
+            <div class="field-group">
+              <label>WhatsApp</label>
+              <input formControlName="whatsAppNumber" placeholder="+91 99999 00000" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Email</label>
+            <input formControlName="email" type="email" placeholder="supplier@example.com" />
+            <span class="err" *ngIf="f['email'].touched && f['email'].invalid">Invalid email</span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-label">Address</h3>
+          <div class="field-group">
+            <label>Street Address</label>
+            <textarea formControlName="address" rows="2" placeholder="123, Industrial Area..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>City</label>
+              <input formControlName="city" placeholder="Chennai" />
+            </div>
+            <div class="field-group">
+              <label>State</label>
+              <select formControlName="state">
+                <option value="">— State —</option>
+                <option *ngFor="let st of indiaStates" [value]="st">{{ st }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Country</label>
+            <input formControlName="country" />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-label">Tax &amp; Legal</h3>
+          <div class="field-row">
+            <div class="field-group">
+              <label>GST Number</label>
+              <input formControlName="gstNumber" placeholder="22AAAAA0000A1Z5" />
+            </div>
+            <div class="field-group">
+              <label>PAN</label>
+              <input formControlName="pan" placeholder="ABCDE1234F" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-label">Bank Details</h3>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Bank Name</label>
+              <input formControlName="bankName" placeholder="SBI" />
+            </div>
+            <div class="field-group">
+              <label>IFSC</label>
+              <input formControlName="ifsc" placeholder="SBIN0001234" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Account Number</label>
+            <input formControlName="accountNumber" placeholder="1234567890" />
+          </div>
+        </div>
+
+        <div class="form-section full">
+          <h3 class="section-label">Notes</h3>
+          <div class="field-group">
+            <textarea formControlName="notes" rows="2" placeholder="Any special notes about this supplier..."></textarea>
+          </div>
+          <div class="field-group" *ngIf="editMode">
+            <label class="toggle-label">
+              <input type="checkbox" formControlName="isActive" />
+              <span>Active Supplier</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="closeForm()">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="submitting">
+          {{ submitting ? 'Saving...' : (editMode ? 'Update Supplier' : 'Create Supplier') }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Filters ────────────────────────────────────── -->
+  <div class="filter-bar">
+    <input class="filter-input" [(ngModel)]="filterText" (ngModelChange)="applyFilter()"
+           placeholder="🔍 Search name, contact, city..." />
+    <select class="filter-select" [(ngModel)]="filterCat" (ngModelChange)="applyFilter()">
+      <option value="">All Categories</option>
+      <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterActive" (ngModelChange)="applyFilter()">
+      <option value="">All Status</option>
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+    <span class="count-badge">{{ filtered.length }} suppliers</span>
+  </div>
+
+  <!-- ── Loading ────────────────────────────────────── -->
+  <div class="loading" *ngIf="loading">Loading suppliers...</div>
+
+  <!-- ── Empty ──────────────────────────────────────── -->
+  <div class="empty" *ngIf="!loading && filtered.length === 0">
+    <div class="empty-icon">🏭</div>
+    <p>No suppliers found. <a (click)="openCreate()">Add one now.</a></p>
+  </div>
+
+  <!-- ── Supplier Cards Grid ────────────────────────── -->
+  <div class="supplier-grid" *ngIf="!loading && filtered.length > 0">
+    <div class="supplier-card" *ngFor="let s of filtered" [class.inactive]="!s.isActive">
+
+      <div class="card-top">
+        <div class="avatar">{{ s.companyName.charAt(0) }}</div>
+        <div class="card-info">
+          <div class="card-name">{{ s.companyName }}</div>
+          <div class="card-sub">{{ s.contactPerson }}</div>
+          <span class="cat-badge">{{ s.category }}</span>
+        </div>
+        <span class="status-dot" [class.active]="s.isActive" [title]="s.isActive ? 'Active' : 'Inactive'"></span>
+      </div>
+
+      <div class="card-body">
+        <div class="card-row" *ngIf="s.phone"><span>📞</span> {{ s.phone }}</div>
+        <div class="card-row" *ngIf="s.email"><span>✉️</span> {{ s.email }}</div>
+        <div class="card-row" *ngIf="s.city"><span>📍</span> {{ s.city }}, {{ s.state }}</div>
+        <div class="card-row" *ngIf="s.gstNumber"><span>🧾</span> GST: {{ s.gstNumber }}</div>
+      </div>
+
+      <div class="card-rating">
+        <span class="star filled" *ngFor="let x of stars(s.rating)">★</span>
+        <span class="star" *ngFor="let x of stars(5 - Math.round(s.rating))">★</span>
+        <span class="rating-val">{{ s.rating | number:'1.1-1' }} ({{ s.totalOrders }} orders)</span>
+      </div>
+
+      <div class="card-footer">
+        <a class="icon-btn wa" *ngIf="s.whatsAppNumber"
+           [href]="waLink(s.whatsAppNumber)" target="_blank"
+           title="WhatsApp">💬</a>
+        <button class="icon-btn star-btn" (click)="openRating(s)" title="Rate supplier">⭐</button>
+        <button class="icon-btn edit-btn" (click)="openEdit(s)" title="Edit">✏️</button>
+        <button class="icon-btn toggle-btn" (click)="toggleActive(s)"
+                [title]="s.isActive ? 'Deactivate' : 'Activate'">
+          {{ s.isActive ? '🔴' : '🟢' }}
+        </button>
+        <button class="icon-btn del-btn" (click)="delete(s)" title="Delete">🗑️</button>
+      </div>
+
+      <div class="card-code">{{ s.supplierCode }}</div>
+    </div>
+  </div>
+
+  <!-- ── Rating Modal ───────────────────────────────── -->
+  <div class="modal-overlay" *ngIf="ratingModal.show" (click)="ratingModal.show=false">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h3>Rate {{ ratingModal.supplier?.companyName }}</h3>
+      <div class="rating-stars">
+        <button *ngFor="let i of [1,2,3,4,5]"
+                class="rating-star"
+                [class.active]="i <= ratingModal.value"
+                (click)="ratingModal.value = i">★</button>
+      </div>
+      <p class="rating-label">{{ ratingModal.value }}/5</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="ratingModal.show=false">Cancel</button>
+        <button class="btn-primary" (click)="submitRating()">Submit Rating</button>
+      </div>
+    </div>
+  </div>
+
+</div>

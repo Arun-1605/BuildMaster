@@ -1,0 +1,77 @@
+<div class="sub-page">
+  <!-- Header -->
+  <div class="sub-header">
+    <h1>🏗️ BuildMaster Premium</h1>
+    <p>Unlock the full power of your construction management suite</p>
+  </div>
+
+  <!-- Active subscription banner -->
+  <div *ngIf="isPremium" class="active-banner">
+    <span class="active-icon">✅</span>
+    <div>
+      <strong>Your Premium subscription is active!</strong>
+      <span *ngIf="subscriptionExpiry"> — Expires {{ subscriptionExpiry | date:'dd MMM yyyy' }}</span>
+    </div>
+    <button class="btn-outline" (click)="loadPlans()">Renew / Extend</button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="error"   class="alert-error">{{ error }}</div>
+  <div *ngIf="success" class="alert-success">🎉 {{ success }}</div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-wrap"><div class="spinner"></div><span>Loading plans…</span></div>
+
+  <!-- Plans -->
+  <div *ngIf="!loading" class="plans-grid">
+    <!-- Free tier card (info only) -->
+    <div class="plan-card free-card">
+      <div class="plan-badge">Current</div>
+      <h2>Free</h2>
+      <div class="plan-price">₹0 <span>/forever</span></div>
+      <ul class="feature-list">
+        <li class="feat-ok">Basic Project Management</li>
+        <li class="feat-ok">Risk Register</li>
+        <li class="feat-ok">Cost Estimation (manual)</li>
+        <li class="feat-no">AI Plan Generation</li>
+        <li class="feat-no">AI Risk / Cost AI</li>
+        <li class="feat-no">3D Floor Plan & Vastu AI</li>
+        <li class="feat-no">Supplier Master & RFQ</li>
+        <li class="feat-no">WhatsApp Quotations</li>
+        <li class="feat-no">Material Price Tracker</li>
+      </ul>
+    </div>
+
+    <!-- Paid plans -->
+    <div *ngFor="let plan of plans"
+         class="plan-card premium-card"
+         [class.selected]="selectedPlanId === plan.id"
+         (click)="selectPlan(plan.id)">
+      <div class="plan-badge popular" *ngIf="plan.id === 'yearly'">Best Value</div>
+      <div class="plan-badge" *ngIf="plan.id === 'monthly'">Monthly</div>
+      <h2>{{ plan.name }}</h2>
+      <div class="plan-price">
+        ₹{{ plan.price | number }} <span>/{{ plan.duration }}</span>
+      </div>
+      <div *ngIf="plan.id === 'yearly'" class="savings-badge">Save ₹2,989</div>
+      <ul class="feature-list">
+        <li *ngFor="let f of plan.features" class="feat-ok">{{ f }}</li>
+      </ul>
+      <div class="select-indicator" *ngIf="selectedPlanId === plan.id">✓ Selected</div>
+    </div>
+  </div>
+
+  <!-- Subscribe CTA -->
+  <div *ngIf="!loading" class="cta-section">
+    <div class="plan-summary">
+      <span>Selected: <strong>{{ getSelectedPlanName() }}</strong></span>
+    </div>
+    <button class="btn-subscribe"
+            [disabled]="paying"
+            (click)="subscribe()">
+      <span *ngIf="!paying">🔒 Pay Securely with Razorpay</span>
+      <span *ngIf="paying">Processing…</span>
+    </button>
+    <p class="secure-note">🔐 Secured by Razorpay. Your payment info is never stored on our servers.</p>
+  </div>
+</div>

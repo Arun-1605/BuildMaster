@@ -1,0 +1,221 @@
+<div class="ce-container">
+  <!-- Header -->
+  <div class="ce-header">
+    <div>
+      <h1>💰 Cost Estimation (BOQ)</h1>
+      <p>AI-powered Bill of Quantities and detailed cost breakdown</p>
+    </div>
+    <div class="header-controls">
+      <select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectChange()" class="project-select">
+        <option [value]="null">-- Select Project --</option>
+        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+      </select>
+      <select *ngIf="selectedProjectId" [(ngModel)]="qualityLevel" class="quality-select">
+        <option *ngFor="let q of qualityOptions" [value]="q">{{ q }} Quality</option>
+      </select>
+      <button *ngIf="selectedProjectId" class="btn-ai" (click)="runAIEstimate()" [disabled]="isEstimating">
+        {{ isEstimating ? '⏳ Estimating...' : '🤖 AI Estimate BOQ' }}
+      </button>
+      <button *ngIf="selectedProjectId" class="btn-secondary" (click)="loadItems()">↻ Reload BOQ</button>
+      <button *ngIf="selectedProjectId" class="btn-primary" (click)="openAdd()">+ Add Item</button>
+      <button *ngIf="items.length > 0" class="btn-secondary" (click)="exportCSV()">📄 Export CSV</button>
+      <button *ngIf="items.length > 0" class="btn-secondary" (click)="printBOQ()">🖨️ Print</button>
+    </div>
+  </div>
+
+  <div *ngIf="statusMessage" class="status-banner" [ngClass]="statusType">{{ statusMessage }}</div>
+
+  <div *ngIf="selectedProjectId" class="tab-bar">
+    <button class="tab" [class.active]="activeTab==='boq'" (click)="activeTab='boq'">BOQ</button>
+    <button class="tab" [class.active]="activeTab==='analysis'" (click)="activeTab='analysis'">Analysis</button>
+    <button class="tab" [class.active]="activeTab==='summary'" (click)="activeTab='summary'">Summary</button>
+  </div>
+
+  <div *ngIf="!selectedProjectId" class="no-selection">
+    <div class="no-sel-icon">💰</div>
+    <p>Select a project to view and build the Bill of Quantities</p>
+  </div>
+
+  <div *ngIf="selectedProjectId" class="ce-body">
+    <!-- Summary -->
+    <div *ngIf="activeTab === 'summary'" class="summary-section">
+      <div class="grand-total-card">
+        <div class="gt-label">Grand Total Estimate</div>
+        <div class="gt-value">₹{{ grandTotal | number:'1.0-0' }}</div>
+        <div class="gt-items">{{ items.length }} line items</div>
+      </div>
+
+      <div class="category-breakdown">
+        <h3>Cost Breakdown by Category</h3>
+        <div *ngFor="let ct of categoryTotals" class="cat-bar-row">
+          <div class="cat-bar-label">
+            <span class="cat-dot" [style.background]="getCategoryColor(ct.category)"></span>
+            <span>{{ ct.category }}</span>
+            <span class="cat-pct">{{ getCategoryPct(ct.category) }}%</span>
+          </div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" [style.width.%]="getCategoryPct(ct.category)" [style.background]="getCategoryColor(ct.category)"></div>
+          </div>
+          <div class="cat-bar-amount">₹{{ ct.total | number:'1.0-0' }}</div>
+        </div>
+        <div class="summary-metrics">
+          <div class="metric-card">
+            <div class="metric-title">Cost / sqft</div>
+            <div class="metric-value">₹{{ costPerSqft | number:'1.0-0' }}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Markup</div>
+            <div class="metric-value">₹{{ markupAmount | number:'1.0-0' }}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Contingency</div>
+            <div class="metric-value">₹{{ contingencyAmount | number:'1.0-0' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="activeTab === 'analysis'" class="analysis-section">
+      <div class="analysis-grid">
+        <div class="donut-card">
+          <h3>Category Distribution</h3>
+          <div class="donut-wrapper">
+            <svg viewBox="0 0 120 120" class="donut-svg">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#1e293b" stroke-width="18"></circle>
+              <ng-container *ngFor="let seg of donutSegments">
+                <circle cx="60" cy="60" r="50" fill="none" [attr.stroke]="seg.color" stroke-width="18"
+                  [attr.stroke-dasharray]="dashArray(seg.pct)" [attr.stroke-dashoffset]="dashOffset(seg.offset)"
+                  stroke-linecap="round"></circle>
+              </ng-container>
+            </svg>
+            <div class="donut-center">
+              <div class="donut-value">₹{{ grandTotal | number:'1.0-0' }}</div>
+              <div class="donut-label">Total</div>
+            </div>
+          </div>
+        </div>
+        <div class="analysis-list">
+          <h3>Top Categories</h3>
+          <div *ngFor="let ct of categoryTotals" class="analysis-row">
+            <span class="analysis-icon" [style.background]="ct.color"></span>
+            <div class="analysis-meta">
+              <div class="analysis-name">{{ ct.category }}</div>
+              <div class="analysis-sub">{{ ct.pct }}% of total</div>
+            </div>
+            <div class="analysis-amount">₹{{ ct.total | number:'1.0-0' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOQ Table -->
+    <div *ngIf="activeTab === 'boq'" class="boq-section">
+      <div class="boq-header">
+        <h3>Bill of Quantities</h3>
+        <div class="boq-controls">
+          <select [(ngModel)]="filterCategory" class="filter-select">
+            <option value="">All Categories</option>
+            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+          </select>
+          <button *ngIf="items.length > 0" class="btn-danger-outline" (click)="clearAllItems()">🗑️ Clear All</button>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="loading">Loading...</div>
+      <div *ngIf="!isLoading && filteredItems.length === 0" class="empty-state">
+        No items yet. Use "AI Estimate BOQ" for automated estimates, or add items manually.
+      </div>
+
+      <div *ngIf="filteredItems.length > 0" class="boq-table-wrap">
+        <table class="boq-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit</th>
+              <th>Unit Rate (₹)</th>
+              <th>Amount (₹)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filteredItems; let i = index" class="boq-row">
+              <td class="td-num">{{ i + 1 }}</td>
+              <td>
+                <span class="cat-tag" [style.background]="getCategoryColor(item.category) + '22'" [style.border-color]="getCategoryColor(item.category)">
+                  {{ item.category }}
+                </span>
+              </td>
+              <td class="td-name">
+                <div class="item-name">{{ item.itemName }}</div>
+                <div *ngIf="item.notes" class="item-notes">{{ item.notes }}</div>
+              </td>
+              <td class="td-num">{{ item.quantity | number:'1.2-2' }}</td>
+              <td class="td-unit">{{ item.unit }}</td>
+              <td class="td-num">{{ item.unitPrice | number:'1.0-0' }}</td>
+              <td class="td-amount">₹{{ item.totalCost | number:'1.0-0' }}</td>
+              <td class="td-actions">
+                <button class="btn-sm btn-edit" (click)="editItem(item)">✏️</button>
+                <button class="btn-sm btn-danger" (click)="deleteItem(item.id!)">🗑️</button>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="6" class="total-label">Grand Total</td>
+              <td class="total-value">₹{{ grandTotal | number:'1.0-0' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Item Form Modal -->
+<div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingId ? 'Edit' : 'Add' }} BOQ Item</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category</label>
+        <select [(ngModel)]="form.category">
+          <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select [(ngModel)]="form.unit">
+          <option *ngFor="let u of units" [value]="u">{{ u }}</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Item Description *</label>
+        <input [(ngModel)]="form.itemName" placeholder="e.g. Earthwork Excavation in hard rock">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" [(ngModel)]="form.quantity" (ngModelChange)="onQtyOrPriceChange()" placeholder="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Unit Rate (₹)</label>
+        <input type="number" [(ngModel)]="form.unitPrice" (ngModelChange)="onQtyOrPriceChange()" placeholder="0">
+      </div>
+      <div class="form-group full">
+        <label>Total Amount</label>
+        <div class="total-display">₹{{ form.totalCost | number:'1.0-0' }}</div>
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea [(ngModel)]="form.notes" rows="2" placeholder="Additional notes or specifications"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveItem()">{{ editingId ? 'Update' : 'Add' }} Item</button>
+    </div>
+  </div>
+</div>

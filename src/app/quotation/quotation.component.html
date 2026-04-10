@@ -1,0 +1,578 @@
+<div class="q-page">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       VIEW: LIST
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="view === 'list'">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📋 Quotation Requests</h1>
+        <p class="page-sub">Manage RFQs, send to suppliers, track responses and select the best offer.</p>
+      </div>
+      <button class="btn-primary" (click)="openCreate()">+ New RFQ</button>
+    </div>
+
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error"   *ngIf="error">{{ error }}</div>
+
+    <div class="filter-bar">
+      <input class="filter-input" [(ngModel)]="filterText" (ngModelChange)="applyFilter()"
+             placeholder="🔍 Search RFQ number, project, subject..." />
+      <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
+        <option value="">All Status</option>
+        <option>Draft</option><option>Sent</option>
+        <option>PartiallyReceived</option><option>Closed</option><option>Cancelled</option>
+      </select>
+      <span class="count-badge">{{ filteredSummaries.length }} RFQs</span>
+    </div>
+
+    <div class="loading" *ngIf="loading">Loading quotations...</div>
+
+    <div class="empty" *ngIf="!loading && filteredSummaries.length === 0">
+      <div class="empty-icon">📄</div>
+      <p>No quotation requests. <a (click)="openCreate()">Create one.</a></p>
+    </div>
+
+    <div class="rfq-table-wrap" *ngIf="!loading && filteredSummaries.length > 0">
+      <table class="rfq-table">
+        <thead>
+          <tr>
+            <th>RFQ #</th>
+            <th>Project</th>
+            <th>Subject</th>
+            <th>Date</th>
+            <th>Required By</th>
+            <th>Status</th>
+            <th>Items</th>
+            <th>Suppliers</th>
+            <th>Responses</th>
+            <th>Lowest Offer</th>
+            <th>Highest Offer</th>
+            <th>Budget</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of filteredSummaries" (click)="openDetail(s.id)" class="rfq-row">
+            <td class="rfq-num">{{ s.rfqNumber }}</td>
+            <td>{{ s.projectName }}</td>
+            <td class="subject-cell">{{ s.subject }}</td>
+            <td>{{ s.requestDate | date:'dd MMM yy' }}</td>
+            <td>{{ s.requiredByDate ? (s.requiredByDate | date:'dd MMM yy') : 'ASAP' }}</td>
+            <td>
+              <span class="status-pill" [style.background]="statusColor(s.status) + '22'"
+                    [style.color]="statusColor(s.status)">{{ s.status }}</span>
+            </td>
+            <td class="num-cell">{{ s.itemCount }}</td>
+            <td class="num-cell">{{ s.supplierCount }}</td>
+            <td class="num-cell">
+              <span [class.has-response]="s.responseCount > 0">{{ s.responseCount }}</span>
+            </td>
+            <td class="num-cell price">{{ s.lowestOffer  ? ('₹' + (s.lowestOffer  | number:'1.0-0')) : '—' }}</td>
+            <td class="num-cell">{{ s.highestOffer ? ('₹' + (s.highestOffer | number:'1.0-0')) : '—' }}</td>
+            <td class="num-cell">{{ s.totalBudget  ? ('₹' + (s.totalBudget  | number:'1.0-0')) : '—' }}</td>
+            <td><button class="view-btn" (click)="$event.stopPropagation(); openDetail(s.id)">View →</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       VIEW: CREATE
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="view === 'create'">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">➕ New Request for Quotation</h1>
+        <p class="page-sub">Define materials needed and invite suppliers to quote.</p>
+      </div>
+      <button class="btn-secondary" (click)="goList()">← Back</button>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error">{{ error }}</div>
+
+    <form [formGroup]="rfqForm" (ngSubmit)="createRFQ()">
+
+      <!-- Basic Info -->
+      <div class="form-card">
+        <h3 class="card-title">📝 RFQ Details</h3>
+        <div class="form-grid3">
+          <div class="field-group">
+            <label>Project Name *</label>
+            <input formControlName="projectName" placeholder="Sunrise Residency — Block A" />
+            <span class="err" *ngIf="rf['projectName'].touched && rf['projectName'].invalid">Required</span>
+          </div>
+          <div class="field-group">
+            <label>Subject *</label>
+            <input formControlName="subject" placeholder="Foundation Concrete & Steel Requirement" />
+            <span class="err" *ngIf="rf['subject'].touched && rf['subject'].invalid">Required</span>
+          </div>
+          <div class="field-group">
+            <label>Required By Date</label>
+            <input type="date" formControlName="requiredByDate" />
+          </div>
+          <div class="field-group">
+            <label>Total Budget (₹)</label>
+            <input type="number" formControlName="totalBudget" placeholder="5000000" />
+          </div>
+          <div class="field-group">
+            <label>Delivery Address</label>
+            <input formControlName="deliveryAddress" placeholder="Plot 12, Industrial Area, Chennai" />
+          </div>
+          <div class="field-group">
+            <label>Created By</label>
+            <input formControlName="createdBy" placeholder="Er. Ramesh Kumar" />
+          </div>
+          <div class="field-group full">
+            <label>Notes / Instructions</label>
+            <textarea formControlName="notes" rows="2"
+                      placeholder="All materials must conform to IS codes. Delivery in 2 batches."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="form-card">
+        <div class="card-title-row">
+          <h3 class="card-title">🧱 Materials Required</h3>
+          <button type="button" class="btn-add-row" (click)="addItem()">+ Add Row</button>
+        </div>
+
+        <div class="items-table-wrap">
+          <table class="items-table" formArrayName="items">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Material Name *</th>
+                <th>Description</th>
+                <th>Qty *</th>
+                <th>Unit *</th>
+                <th>Target Price (₹/unit)</th>
+                <th>Specifications</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+                <td class="idx">{{ i+1 }}</td>
+                <td>
+                  <input formControlName="materialName" placeholder="OPC Cement 53 Grade" />
+                  <span class="err" *ngIf="item.get('materialName')?.touched && item.get('materialName')?.invalid">Required</span>
+                </td>
+                <td><input formControlName="description" placeholder="For RCC work" /></td>
+                <td>
+                  <input type="number" formControlName="quantity" min="0.001" class="narrow" />
+                  <span class="err" *ngIf="item.get('quantity')?.touched && item.get('quantity')?.invalid">Required</span>
+                </td>
+                <td>
+                  <select formControlName="unit">
+                    <option *ngFor="let u of UNITS" [value]="u">{{ u }}</option>
+                  </select>
+                  <span class="err" *ngIf="item.get('unit')?.touched && item.get('unit')?.invalid">Required</span>
+                </td>
+                <td><input type="number" formControlName="targetPrice" min="0" class="narrow" placeholder="380" /></td>
+                <td><input formControlName="specifications" placeholder="IS 12269, 50 kg bags" /></td>
+                <td>
+                  <button type="button" class="del-row" (click)="removeItem(i)"
+                          [disabled]="items.length === 1">✕</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Supplier Selection -->
+      <div class="form-card">
+        <h3 class="card-title">🏭 Select Suppliers to Invite</h3>
+        <p class="card-hint">Choose suppliers who will receive this RFQ via email and/or WhatsApp.</p>
+
+        <div class="sup-select-grid">
+          <div class="sup-select-card"
+               *ngFor="let s of allSuppliers"
+               [class.selected]="selectedSupplierIds.has(s.id)"
+               (click)="toggleSupplier(s.id)">
+            <div class="sup-check">{{ selectedSupplierIds.has(s.id) ? '✔' : '' }}</div>
+            <div class="sup-info">
+              <div class="sup-name">{{ s.companyName }}</div>
+              <div class="sup-cat">{{ s.category }}</div>
+              <div class="sup-contact">{{ s.city }} · {{ s.phone }}</div>
+            </div>
+            <div class="sup-badges">
+              <span class="badge-wa"  *ngIf="s.whatsAppNumber">💬</span>
+              <span class="badge-em"  *ngIf="s.email">✉️</span>
+              <span class="badge-rat">★ {{ s.rating | number:'1.1-1' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="selected-count">{{ selectedSupplierIds.size }} supplier(s) selected</p>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="goList()">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="submitting">
+          {{ submitting ? 'Creating...' : 'Create RFQ' }}
+        </button>
+      </div>
+
+    </form>
+  </ng-container>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       VIEW: DETAIL
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="view === 'detail'">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">
+          {{ detail?.rfqNumber ?? 'Loading...' }}
+          <span class="status-pill" *ngIf="detail"
+                [style.background]="statusColor(detail.status) + '22'"
+                [style.color]="statusColor(detail.status)">{{ detail.status }}</span>
+        </h1>
+        <p class="page-sub">{{ detail?.subject }}</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-outline" *ngIf="detail && detail.status !== 'Closed' && detail.status !== 'Cancelled'"
+                (click)="openSend(detail.id)">📤 Send to Suppliers</button>
+        <button class="btn-secondary" (click)="goList()">← Back</button>
+      </div>
+    </div>
+
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+    <div class="alert alert-error"   *ngIf="error">{{ error }}</div>
+
+    <div class="loading" *ngIf="detailLoading">Loading RFQ...</div>
+
+    <ng-container *ngIf="!detailLoading && detail">
+
+      <!-- Meta cards -->
+      <div class="meta-strip">
+        <div class="meta-item">
+          <div class="meta-label">Project</div>
+          <div class="meta-val">{{ detail.projectName }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Required By</div>
+          <div class="meta-val">{{ detail.requiredByDate ? (detail.requiredByDate | date:'dd MMM yyyy') : 'ASAP' }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Budget</div>
+          <div class="meta-val">{{ detail.totalBudget ? ('₹' + (detail.totalBudget | number:'1.0-0')) : 'Not specified' }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Delivery To</div>
+          <div class="meta-val">{{ detail.deliveryAddress || '—' }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Created By</div>
+          <div class="meta-val">{{ detail.createdBy || '—' }}</div>
+        </div>
+        <div class="meta-item" *ngIf="detail.notes">
+          <div class="meta-label">Notes</div>
+          <div class="meta-val notes-val">{{ detail.notes }}</div>
+        </div>
+      </div>
+
+      <!-- Items table -->
+      <div class="section-card">
+        <h3 class="card-title">🧱 Materials Requested</h3>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Material</th><th>Description</th>
+              <th>Qty</th><th>Unit</th><th>Target Price</th><th>Specifications</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of detail.items; let i = index">
+              <td>{{ i+1 }}</td>
+              <td><strong>{{ item.materialName }}</strong></td>
+              <td>{{ item.description }}</td>
+              <td class="num-cell">{{ item.quantity | number:'1.0-3' }}</td>
+              <td>{{ item.unit }}</td>
+              <td class="price">{{ item.targetPrice ? ('₹' + (item.targetPrice | number:'1.0-0') + '/' + item.unit) : 'Competitive' }}</td>
+              <td class="spec">{{ item.specifications }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── SUPPLIER COMPARISON TABLE ─────────────────────────────────── -->
+      <div class="section-card">
+        <h3 class="card-title">🏭 Supplier Quotations &amp; Responses</h3>
+        <p class="card-hint">Compare offers side by side. Enter response, select the best supplier.</p>
+
+        <div class="supplier-comparison-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr class="comp-header-row">
+                <!-- Fixed item column -->
+                <th class="item-col-header">Material / Item</th>
+                <th class="item-col-header">Qty</th>
+                <th class="item-col-header">Unit</th>
+                <th class="item-col-header">Target Price</th>
+
+                <!-- One column per supplier -->
+                <th class="supplier-col-header" *ngFor="let qs of detail.suppliers">
+                  <div class="sup-th">
+                    <div class="sup-th-name">{{ qs.companyName }}</div>
+                    <div class="sup-th-status">
+                      <span class="status-pill small" [style.background]="statusColor(qs.status) + '22'"
+                            [style.color]="statusColor(qs.status)">{{ qs.status }}</span>
+                    </div>
+                    <div class="sup-th-sent" *ngIf="qs.sentAt">Sent {{ qs.sentAt | date:'dd MMM' }}</div>
+                    <div class="sup-th-actions">
+                      <a class="icon-btn-sm wa" *ngIf="qs.whatsAppNumber"
+                         [href]="waLink(qs.whatsAppNumber, detail.rfqNumber)" target="_blank">💬</a>
+                      <button class="icon-btn-sm" (click)="openResponseModal(qs)"
+                              *ngIf="detail.status !== 'Closed'">📥 Enter Response</button>
+                      <button class="btn-select" *ngIf="qs.response && !qs.isSelected && detail.status !== 'Closed'"
+                              (click)="openSelectModal(qs.supplierId, qs.companyName)">🏆 Select</button>
+                      <span class="winner-badge" *ngIf="qs.isSelected">✅ SELECTED</span>
+                    </div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <!-- Per item rows -->
+              <tr *ngFor="let item of detail.items; let i = index">
+                <td class="item-name"><strong>{{ item.materialName }}</strong></td>
+                <td class="num-cell">{{ item.quantity | number:'1.0-2' }}</td>
+                <td>{{ item.unit }}</td>
+                <td class="price">{{ item.targetPrice ? ('₹' + (item.targetPrice | number:'1.0-0')) : '—' }}</td>
+
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  <ng-container *ngIf="qs.response">
+                    <ng-container *ngFor="let ri of qs.response.items">
+                      <ng-container *ngIf="ri.quotationItemId === item.id">
+                        <div class="offered-price">₹{{ ri.offeredPrice | number:'1.0-2' }}/{{ ri.unit }}</div>
+                        <div class="offered-total">Total: ₹{{ ri.totalAmount | number:'1.0-0' }}</div>
+                        <div class="tax-label">GST {{ ri.taxPercentage }}%</div>
+                      </ng-container>
+                    </ng-container>
+                  </ng-container>
+                  <span class="pending-badge" *ngIf="!qs.response">—</span>
+                </td>
+              </tr>
+
+              <!-- Summary row -->
+              <tr class="totals-row">
+                <td colspan="3"><strong>Total Offered Amount</strong></td>
+                <td class="price">{{ detail.totalBudget ? ('₹' + (detail.totalBudget | number:'1.0-0')) : '—' }}</td>
+                <td class="response-cell totals-cell" *ngFor="let qs of detail.suppliers">
+                  <ng-container *ngIf="qs.response">
+                    <div class="grand-total">₹{{ qs.response.totalOfferedAmount | number:'1.0-0' }}</div>
+                  </ng-container>
+                  <span *ngIf="!qs.response">—</span>
+                </td>
+              </tr>
+
+              <!-- Lead time row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Lead Time</em></td>
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.leadTimeDays ? (qs.response!.leadTimeDays + ' days') : '—' }}
+                </td>
+              </tr>
+
+              <!-- Payment terms row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Payment Terms</em></td>
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.paymentTerms || '—' }}
+                </td>
+              </tr>
+
+              <!-- Delivery terms row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Delivery Terms</em></td>
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.deliveryTerms || '—' }}
+                </td>
+              </tr>
+
+              <!-- Supplier comments row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Supplier Comments</em></td>
+                <td class="response-cell comment-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.supplierComments || '—' }}
+                </td>
+              </tr>
+
+              <!-- Valid until row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Valid Until</em></td>
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.validUntil ? (qs.response!.validUntil | date:'dd MMM yyyy') : '—' }}
+                </td>
+              </tr>
+
+              <!-- Received via row -->
+              <tr class="meta-row">
+                <td colspan="4"><em>Received Via</em></td>
+                <td class="response-cell" *ngFor="let qs of detail.suppliers">
+                  {{ qs.response?.receivedVia || '—' }}
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </ng-container>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL: SEND
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" *ngIf="sendModal.show" (click)="sendModal.show=false">
+    <div class="modal-box wide" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">📤 Send RFQ to Suppliers</h3>
+
+      <div class="field-group" style="margin-bottom:16px">
+        <label>Send Via</label>
+        <div class="radio-group">
+          <label><input type="radio" [(ngModel)]="sendModal.via" value="Email"> ✉️ Email only</label>
+          <label><input type="radio" [(ngModel)]="sendModal.via" value="WhatsApp"> 💬 WhatsApp only</label>
+          <label><input type="radio" [(ngModel)]="sendModal.via" value="Both"> Both</label>
+        </div>
+      </div>
+
+      <p class="send-note">
+        WhatsApp will generate click-to-open links. Email will be sent directly if SMTP is configured.
+      </p>
+
+      <div class="send-results" *ngIf="sendResult.length > 0">
+        <div class="send-result-row" *ngFor="let r of sendResult">
+          <strong>{{ r.companyName }}</strong>
+          <span class="badge" [class.ok]="r.emailSent">
+            Email {{ r.emailSent ? '✅' : '⚠️ (configure SMTP)' }}
+          </span>
+          <a *ngIf="r.whatsAppLink" [href]="r.whatsAppLink" target="_blank" class="wa-open">
+            Open WhatsApp 💬
+          </a>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="sendModal.show=false">Close</button>
+        <button class="btn-primary" (click)="send()" [disabled]="sending">
+          {{ sending ? 'Sending...' : 'Send Now' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL: ENTER RESPONSE
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" *ngIf="responseModal.show" (click)="responseModal.show=false">
+    <div class="modal-box wide" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">📥 Enter Supplier Response — {{ responseModal.qs?.companyName }}</h3>
+
+      <form [formGroup]="responseForm" (ngSubmit)="submitResponse()">
+        <div class="form-grid3" style="margin-bottom:16px">
+          <div class="field-group">
+            <label>Total Offered Amount (₹)</label>
+            <input type="number" formControlName="totalOfferedAmount" placeholder="4850000" />
+          </div>
+          <div class="field-group">
+            <label>Valid Until</label>
+            <input type="date" formControlName="validUntil" />
+          </div>
+          <div class="field-group">
+            <label>Lead Time (days)</label>
+            <input type="number" formControlName="leadTimeDays" placeholder="7" />
+          </div>
+          <div class="field-group">
+            <label>Payment Terms</label>
+            <input formControlName="paymentTerms" placeholder="50% advance, 50% on delivery" />
+          </div>
+          <div class="field-group">
+            <label>Delivery Terms</label>
+            <input formControlName="deliveryTerms" placeholder="Delivered to site, unloaded" />
+          </div>
+          <div class="field-group">
+            <label>Received Via</label>
+            <select formControlName="receivedVia">
+              <option>Email</option><option>WhatsApp</option>
+              <option>Phone</option><option>Portal</option>
+            </select>
+          </div>
+          <div class="field-group full">
+            <label>Supplier Comments</label>
+            <textarea formControlName="supplierComments" rows="2"
+                      placeholder="Any comments the supplier mentioned..."></textarea>
+          </div>
+        </div>
+
+        <!-- Per-item pricing -->
+        <h4 style="color:#f7c948;margin-bottom:8px;">Item-wise Pricing</h4>
+        <div class="items-table-wrap">
+          <table class="items-table" formArrayName="items">
+            <thead>
+              <tr>
+                <th>Material</th>
+                <th>Offered Price (₹)</th>
+                <th>Qty</th>
+                <th>Unit</th>
+                <th>GST %</th>
+                <th>Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of rItems.controls; let i = index" [formGroupName]="i">
+                <td><strong>{{ item.get('materialName')?.value }}</strong></td>
+                <td><input type="number" formControlName="offeredPrice" min="0" class="narrow" /></td>
+                <td><input type="number" formControlName="offeredQuantity" min="0" class="narrow" /></td>
+                <td>{{ item.get('unit')?.value }}</td>
+                <td><input type="number" formControlName="taxPercentage" min="0" max="100" class="narrow" /></td>
+                <td class="price">₹{{ calcLineTotal(i) | number:'1.0-0' }}</td>
+              </tr>
+              <tr class="totals-row">
+                <td colspan="5"><strong>Grand Total (incl. GST)</strong></td>
+                <td class="price grand-total">₹{{ calcResponseTotal() | number:'1.0-0' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-actions" style="margin-top:20px">
+          <button type="button" class="btn-secondary" (click)="responseModal.show=false">Cancel</button>
+          <button type="submit" class="btn-primary">Save Response</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL: SELECT WINNER
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" *ngIf="selectModal.show" (click)="selectModal.show=false">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h3 class="modal-title">🏆 Select Supplier</h3>
+      <p>You are selecting <strong>{{ selectModal.name }}</strong> as the winning supplier for this RFQ. The RFQ will be marked as <strong>Closed</strong>.</p>
+      <div class="field-group" style="margin-top:16px">
+        <label>Reason for Selection</label>
+        <textarea [(ngModel)]="selectReason" rows="3"
+                  placeholder="Lowest price, reliable delivery, good payment terms..."></textarea>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-secondary" (click)="selectModal.show=false">Cancel</button>
+        <button class="btn-primary" (click)="confirmSelect()">Confirm Selection</button>
+      </div>
+    </div>
+  </div>
+
+</div>

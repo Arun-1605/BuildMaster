@@ -1,0 +1,349 @@
+<div class="rm-container">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <div class="rm-header">
+    <div>
+      <h1>⚠️ Risk Management</h1>
+      <p>Identify, assess, and mitigate construction project risks</p>
+    </div>
+    <div class="header-controls">
+      <select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectChange()" class="project-select">
+        <option [value]="null">— Select Project —</option>
+        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+      </select>
+      <ng-container *ngIf="selectedProjectId">
+        <button class="btn-ai" (click)="runAIAssessment()" [disabled]="isAssessing">
+          <span *ngIf="!isAssessing">🤖 AI Risk Assessment</span>
+          <span *ngIf="isAssessing" class="spinner-wrap"><span class="spinner"></span> Analyzing…</span>
+        </button>
+        <button class="btn-primary" (click)="openAdd()">+ Add Risk</button>
+        <button class="btn-export" (click)="exportCSV()" title="Export to CSV">⬇️ CSV</button>
+        <button class="btn-export" (click)="exportPDF()" title="Generate PDF Report" style="background:#1a6b4a">📄 Report</button>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ── Empty state ────────────────────────────────────────────────── -->
+  <div *ngIf="!selectedProjectId" class="no-selection">
+    <div class="no-sel-icon">⚠️</div>
+    <p>Select a project to view and manage its risks</p>
+  </div>
+
+  <div *ngIf="selectedProjectId" class="rm-body">
+
+    <!-- ── KPI Cards ──────────────────────────────────────────────── -->
+    <div class="kpi-row">
+      <div class="kpi critical">
+        <div class="kpi-val">{{ criticalCount }}</div>
+        <div class="kpi-icon">🔴</div>
+        <div class="kpi-label">Critical</div>
+      </div>
+      <div class="kpi high">
+        <div class="kpi-val">{{ highCount }}</div>
+        <div class="kpi-icon">🟠</div>
+        <div class="kpi-label">High</div>
+      </div>
+      <div class="kpi medium">
+        <div class="kpi-val">{{ mediumCount }}</div>
+        <div class="kpi-icon">🟡</div>
+        <div class="kpi-label">Medium</div>
+      </div>
+      <div class="kpi open">
+        <div class="kpi-val">{{ openCount }}</div>
+        <div class="kpi-icon">📂</div>
+        <div class="kpi-label">Open</div>
+      </div>
+      <div class="kpi mitigated">
+        <div class="kpi-val">{{ mitigatedCount }}</div>
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-label">Resolved</div>
+      </div>
+      <div class="kpi total">
+        <div class="kpi-val">{{ risks.length }}</div>
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-label">Total Risks</div>
+      </div>
+    </div>
+
+    <!-- ── Tabs ───────────────────────────────────────────────────── -->
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab==='register'" (click)="activeTab='register'">📋 Risk Register</button>
+      <button class="tab" [class.active]="activeTab==='matrix'"   (click)="activeTab='matrix'">🎯 Risk Matrix</button>
+      <button class="tab" [class.active]="activeTab==='summary'"  (click)="activeTab='summary'">📊 Summary</button>
+    </div>
+
+    <!-- ══════ RISK REGISTER TAB ══════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'register'" class="tab-content">
+
+      <!-- Filter / sort bar -->
+      <div class="filter-bar">
+        <select [(ngModel)]="filterCategory" class="filter-select">
+          <option value="">All Categories</option>
+          <option *ngFor="let c of categories" [value]="c">{{ getCategoryIcon(c) }} {{ c }}</option>
+        </select>
+        <select [(ngModel)]="filterStatus" class="filter-select">
+          <option value="">All Statuses</option>
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+        <div class="sort-btns">
+          <button class="sort-btn" [class.active]="sortBy==='score'"    (click)="toggleSort('score')">Score {{ sortIcon('score') }}</button>
+          <button class="sort-btn" [class.active]="sortBy==='category'" (click)="toggleSort('category')">Category {{ sortIcon('category') }}</button>
+          <button class="sort-btn" [class.active]="sortBy==='status'"   (click)="toggleSort('status')">Status {{ sortIcon('status') }}</button>
+        </div>
+        <span class="filter-count">{{ filteredRisks.length }} risk{{ filteredRisks.length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      <div *ngIf="isLoading" class="loading">
+        <span class="spinner"></span> Loading risks…
+      </div>
+      <div *ngIf="!isLoading && filteredRisks.length === 0" class="empty-state">
+        No risks found. Run <strong>AI Risk Assessment</strong> or add risks manually.
+      </div>
+
+      <!-- Risk cards -->
+      <div class="risk-list">
+        <div *ngFor="let r of filteredRisks" class="risk-card"
+             [style.border-left-color]="getRiskColor(r.probability * r.impact)">
+
+          <!-- Card header -->
+          <div class="rc-head">
+            <div class="rc-title-row">
+              <span class="rc-score-chip" [style.background]="getRiskColor(r.riskScore ?? 0)">
+                {{ r.riskScore }}
+              </span>
+              <span class="cat-icon">{{ getCategoryIcon(r.category) }}</span>
+              <span class="rc-title">{{ r.title }}</span>
+            </div>
+            <div class="rc-badges">
+              <span class="badge" [class]="getLevelBadge(r.riskLevel || calcLevel(r.probability * r.impact))">
+                {{ r.riskLevel || calcLevel(r.probability * r.impact) }}
+              </span>
+              <span class="badge" [class]="getStatusBadge(r.status)">{{ r.status }}</span>
+            </div>
+          </div>
+
+          <p class="rc-desc">{{ r.description }}</p>
+
+          <div class="rc-meta">
+            <span class="meta-pill">P: <strong>{{ levelLabels[r.probability] }}</strong></span>
+            <span class="meta-pill">I: <strong>{{ levelLabels[r.impact] }}</strong></span>
+            <span class="meta-pill" *ngIf="r.owner">👤 {{ r.owner }}</span>
+            <span class="meta-pill">📂 {{ r.category }}</span>
+            <span class="meta-pill" *ngIf="r.responseType">{{ responseIcons[r.responseType] }} {{ r.responseType }}</span>
+            <span class="meta-pill" *ngIf="r.targetDate">📅 {{ r.targetDate | date:'dd MMM yyyy' }}</span>
+          </div>
+
+          <div class="rc-mitigation" *ngIf="r.mitigationStrategy">
+            <span class="mit-icon">🛡️</span>
+            <span>{{ r.mitigationStrategy }}</span>
+          </div>
+
+          <!-- Footer actions -->
+          <div class="rc-footer">
+            <div class="quick-status">
+              <span class="qs-label">Quick update:</span>
+              <button *ngFor="let s of statuses" class="qs-btn"
+                      [class.qs-active]="r.status === s"
+                      (click)="quickStatus(r, s)">{{ s }}</button>
+            </div>
+            <div class="rc-actions">
+              <button class="btn-sm btn-edit"   (click)="editRisk(r)">✏️ Edit</button>
+              <button class="btn-sm btn-danger" (click)="deleteRisk(r.id!)">🗑️ Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ RISK MATRIX TAB ═════════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'matrix'" class="tab-content matrix-tab">
+      <div class="matrix-card">
+        <h3>5×5 Risk Matrix — Probability vs Impact</h3>
+        <div class="matrix-wrap">
+          <div class="axis-label y-axis">← Probability</div>
+          <div class="matrix-body">
+            <!-- Column headers -->
+            <div class="matrix-grid">
+              <div class="mhdr corner"></div>
+              <div class="mhdr" *ngFor="let i of levelScale">Impact {{ i }}<br><small>{{ levelLabels[i] }}</small></div>
+
+              <!-- Rows: probability descending -->
+              <ng-container *ngFor="let p of [5,4,3,2,1]">
+                <div class="mhdr row-hdr">P{{ p }}<br><small>{{ levelLabels[p] }}</small></div>
+                <div class="mcell" *ngFor="let i of levelScale"
+                     [style.background]="getRiskColor(p*i) + '28'"
+                     [style.border-color]="getRiskColor(p*i) + '88'">
+                  <div *ngIf="matrixCell(p,i).length === 0" class="mcell-empty"></div>
+                  <div *ngIf="matrixCell(p,i).length > 0" class="mcell-risks">
+                    <div class="mcell-chip" [style.background]="getRiskColor(p*i)">
+                      {{ matrixCell(p,i).length }}
+                    </div>
+                    <div class="mcell-titles">
+                      <div *ngFor="let r of matrixCell(p,i)" class="mcell-title">{{ r.title }}</div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+          <div class="axis-label x-axis">Impact →</div>
+        </div>
+        <div class="matrix-legend">
+          <span class="leg"><span class="leg-dot" style="background:#22c55e"></span>Low (1–4)</span>
+          <span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>Medium (5–9)</span>
+          <span class="leg"><span class="leg-dot" style="background:#f97316"></span>High (10–16)</span>
+          <span class="leg"><span class="leg-dot" style="background:#ef4444"></span>Critical (17–25)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SUMMARY TAB ════════════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'summary'" class="tab-content summary-tab">
+
+      <div class="summary-grid">
+
+        <!-- Donut chart -->
+        <div class="sum-card donut-card">
+          <h3>Risk Level Distribution</h3>
+          <div class="donut-wrap">
+            <svg viewBox="0 0 100 100" class="donut-svg">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#1e2435" stroke-width="18"/>
+              <circle *ngFor="let seg of donutSegments"
+                      cx="50" cy="50" r="40" fill="none"
+                      [attr.stroke]="seg.color" stroke-width="18"
+                      [attr.stroke-dasharray]="dashArray(seg.pct)"
+                      [attr.stroke-dashoffset]="dashOffset(seg.offset)"
+                      stroke-linecap="butt"
+                      style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+              <text x="50" y="46" text-anchor="middle" font-size="14" font-weight="bold" fill="#f7c948">{{ risks.length }}</text>
+              <text x="50" y="58" text-anchor="middle" font-size="7" fill="#94a3b8">risks</text>
+            </svg>
+            <div class="donut-legend">
+              <div *ngFor="let seg of donutSegments" class="dl-row">
+                <span class="dl-dot" [style.background]="seg.color"></span>
+                <span class="dl-label">{{ seg.label }}</span>
+                <span class="dl-count">{{ seg.count }}</span>
+                <span class="dl-pct">{{ seg.pct | number:'1.0-0' }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="sum-card">
+          <h3>Risk by Category</h3>
+          <div *ngFor="let cs of categoryStats" class="cat-stat-row">
+            <span class="cs-icon">{{ cs.icon }}</span>
+            <span class="cs-label">{{ cs.cat }}</span>
+            <div class="cs-bar-wrap">
+              <div class="cs-bar" [style.width.%]="(cs.count / risks.length) * 100"
+                   [style.background]="getRiskColor(cs.maxScore)"></div>
+            </div>
+            <span class="cs-count">{{ cs.count }}</span>
+            <span class="cs-max-badge" [style.background]="getRiskColor(cs.maxScore)">
+              max {{ cs.maxScore }}
+            </span>
+          </div>
+          <div *ngIf="categoryStats.length === 0" class="empty-state">No risks yet.</div>
+        </div>
+
+        <!-- Status progress -->
+        <div class="sum-card">
+          <h3>Risk Status Tracker</h3>
+          <div *ngFor="let s of statuses" class="status-stat-row">
+            <span class="badge" [class]="getStatusBadge(s)">{{ s }}</span>
+            <div class="ss-bar-wrap">
+              <div class="ss-bar" [style.width.%]="risks.length ? (risks | statusCount:s) / risks.length * 100 : 0"
+                   [style.background]="getStatusBadge(s) === 'badge-red' ? '#ef4444' : getStatusBadge(s) === 'badge-yellow' ? '#f59e0b' : getStatusBadge(s) === 'badge-blue' ? '#3b82f6' : '#22c55e'">
+              </div>
+            </div>
+            <span class="ss-count">{{ risks | statusCount:s }}</span>
+          </div>
+
+          <div class="mitigation-rate" *ngIf="risks.length > 0">
+            <div class="mr-label">Overall Mitigation Rate</div>
+            <div class="mr-bar-wrap">
+              <div class="mr-bar" [style.width.%]="(mitigatedCount / risks.length) * 100"></div>
+            </div>
+            <div class="mr-pct">{{ (mitigatedCount / risks.length) * 100 | number:'1.0-0' }}%</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /rm-body -->
+</div>
+
+<!-- ══ Add/Edit Modal ═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <h3>{{ editingId ? '✏️ Edit Risk' : '➕ Add Risk' }}</h3>
+      <button class="modal-close" (click)="showForm=false">✕</button>
+    </div>
+
+    <!-- Live score banner -->
+    <div class="score-banner" [style.background]="getRiskColor(form.probability * form.impact)">
+      <span>Risk Score: <strong>{{ form.probability * form.impact }}</strong></span>
+      <span class="score-level">{{ calcLevel(form.probability * form.impact) }}</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Risk Title *</label>
+        <input [(ngModel)]="form.title" placeholder="e.g. Heavy rainfall causing foundation delays">
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="form.description" rows="2" placeholder="Detailed description of the risk"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select [(ngModel)]="form.category">
+          <option *ngFor="let c of categories" [value]="c">{{ getCategoryIcon(c) }} {{ c }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Risk Owner</label>
+        <input [(ngModel)]="form.owner" placeholder="Person responsible">
+      </div>
+      <div class="form-group">
+        <label>Probability — <strong>{{ levelLabels[form.probability] }}</strong></label>
+        <input type="range" [(ngModel)]="form.probability" min="1" max="5" step="1">
+        <div class="scale-labels"><span *ngFor="let l of levelScale">{{ l }}</span></div>
+      </div>
+      <div class="form-group">
+        <label>Impact — <strong>{{ levelLabels[form.impact] }}</strong></label>
+        <input type="range" [(ngModel)]="form.impact" min="1" max="5" step="1">
+        <div class="scale-labels"><span *ngFor="let l of levelScale">{{ l }}</span></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="form.status">
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Response Strategy (ISO 31000)</label>
+        <select [(ngModel)]="form.responseType">
+          <option *ngFor="let rt of responseTypes" [value]="rt">{{ responseIcons[rt] }} {{ rt }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Target Resolution Date</label>
+        <input type="date" [(ngModel)]="form.targetDate" />
+      </div>
+      <div class="form-group full">
+        <label>Mitigation Strategy</label>
+        <textarea [(ngModel)]="form.mitigationStrategy" rows="3" placeholder="How will this risk be mitigated?"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveRisk()" [disabled]="!form.title">
+        {{ editingId ? 'Update Risk' : 'Add Risk' }}
+      </button>
+    </div>
+  </div>
+</div>
