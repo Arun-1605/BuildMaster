@@ -73,6 +73,11 @@ export const routes: Routes = [
     canActivate: [AuthGuard, subscriptionGuard]
   },
   {
+    path: 'invoice',
+    loadComponent: () => import('./invoice/invoice.component').then(m => m.InvoiceComponent),
+    canActivate: [AuthGuard, subscriptionGuard]
+  },
+  {
     path: 'floor-plan',
     loadComponent: () => import('./floor-plan-3d/floor-plan-3d.component').then(m => m.FloorPlan3DComponent),
     canActivate: [AuthGuard, subscriptionGuard]

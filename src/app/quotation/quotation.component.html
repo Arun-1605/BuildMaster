@@ -337,6 +337,9 @@
                       <button class="btn-select" *ngIf="qs.response && !qs.isSelected && detail.status !== 'Closed'"
                               (click)="openSelectModal(qs.supplierId, qs.companyName)">🏆 Select</button>
                       <span class="winner-badge" *ngIf="qs.isSelected">✅ SELECTED</span>
+                      <button class="btn-invoice" *ngIf="qs.isSelected && detail.status === 'Closed'"
+                              (click)="sendInvoiceToSupplier(qs.supplierId)"
+                              title="Send Invoice to this supplier">📄 Send Invoice</button>
                     </div>
                   </div>
                 </th>

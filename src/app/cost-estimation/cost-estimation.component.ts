@@ -209,9 +209,26 @@ export class CostEstimationComponent implements OnInit {
   onQtyOrPriceChange() { this.form.totalCost = this.form.quantity * this.form.unitPrice; }
 
   saveItem() {
+    // Frontend validation
+    if (!this.form.itemName?.trim()) {
+      this.setStatus('Item description is required.', 'error');
+      return;
+    }
+    if (this.form.quantity <= 0) {
+      this.setStatus('Quantity must be greater than 0.', 'error');
+      return;
+    }
+    if (this.form.unitPrice <= 0) {
+      this.setStatus('Unit price must be greater than 0.', 'error');
+      return;
+    }
+
     this.form.totalCost = this.form.quantity * this.form.unitPrice;
     const done = () => { this.loadItems(); this.showForm = false; this.setStatus('BOQ item saved successfully.', 'success'); };
-    const error = () => { this.setStatus('Failed to save BOQ item. Please try again.', 'error'); };
+    const error = (err: any) => {
+      console.error('Save error:', err);
+      this.setStatus('Failed to save BOQ item. Please try again.', 'error');
+    };
     if (this.editingId) {
       this.http.put<CostItem>(`${API_URLS.COST_ESTIMATES}/${this.editingId}`, this.form).subscribe({ next: done, error });
     } else {

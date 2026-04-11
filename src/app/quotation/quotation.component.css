@@ -42,6 +42,13 @@
 }
 .btn-select:hover { background: #f59e0b44; }
 
+.btn-invoice {
+  background: #22c55e22; border: 1px solid #22c55e; color: #22c55e;
+  padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
+  margin-top: 4px;
+}
+.btn-invoice:hover { background: #22c55e44; }
+
 .view-btn {
   background: transparent; border: 1px solid #374151; color: #94a3b8;
   padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;

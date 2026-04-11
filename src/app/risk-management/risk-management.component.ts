@@ -110,10 +110,25 @@ export class RiskManagementComponent implements OnInit {
   dashArray(pct: number)     { return `${(pct / 100) * this.CIRC} ${this.CIRC}`; }
   dashOffset(offset: number) { return `${-((offset / 100) * this.CIRC)}`; }
 
+  statusMessage = '';
+  statusType: 'success' | 'error' | 'info' = 'info';
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   constructor(private http: HttpClient) {}
   ngOnInit() { this.loadProjects(); }
+
+  setStatus(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    this.statusMessage = message;
+    this.statusType = type;
+    if (type === 'success') {
+      setTimeout(() => { if (this.statusType === 'success') this.clearStatus(); }, 4500);
+    }
+  }
+
+  clearStatus() {
+    this.statusMessage = '';
+  }
 
   loadProjects() {
     this.http.get<Project[]>(API_URLS.PROJECTS).subscribe({ next: d => this.projects = d });
@@ -181,11 +196,37 @@ export class RiskManagementComponent implements OnInit {
   editRisk(r: Risk) { this.form = { ...r }; this.editingId = r.id!; this.showForm = true; }
 
   saveRisk() {
+    // Frontend validation
+    if (!this.form.title?.trim()) {
+      this.setStatus('Risk title is required.', 'error');
+      return;
+    }
+    if (!this.form.description?.trim()) {
+      this.setStatus('Risk description is required.', 'error');
+      return;
+    }
+    if (!this.form.category) {
+      this.setStatus('Risk category is required.', 'error');
+      return;
+    }
+    if (this.form.probability < 1 || this.form.probability > 5) {
+      this.setStatus('Probability must be between 1 and 5.', 'error');
+      return;
+    }
+    if (this.form.impact < 1 || this.form.impact > 5) {
+      this.setStatus('Impact must be between 1 and 5.', 'error');
+      return;
+    }
+
     const done = () => { this.loadRisks(); this.showForm = false; };
+    const error = (err: any) => {
+      console.error('Save error:', err);
+      this.setStatus('Failed to save risk. Please try again.', 'error');
+    };
     if (this.editingId) {
-      this.http.put<Risk>(`${API_URLS.RISKS}/${this.editingId}`, this.form).subscribe({ next: done });
+      this.http.put<Risk>(`${API_URLS.RISKS}/${this.editingId}`, this.form).subscribe({ next: done, error });
     } else {
-      this.http.post<Risk>(API_URLS.RISKS, this.form).subscribe({ next: done });
+      this.http.post<Risk>(API_URLS.RISKS, this.form).subscribe({ next: done, error });
     }
   }
 

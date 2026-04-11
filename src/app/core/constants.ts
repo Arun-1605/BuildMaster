@@ -47,6 +47,12 @@ export const API_URLS = {
   COST_AI_ESTIMATE:       `${BASE}/Estimation/AIEstimate`,
   COST_AI_SAVE:           `${BASE}/Estimation/AIEstimateAndSave`,
 
+  // Invoice Management
+  INVOICES:               `${BASE}/Invoice`,
+  INVOICE_BY_PROJECT:     `${BASE}/Invoice/project`,
+  INVOICE_GENERATE_FROM_BOQ: `${BASE}/Invoice/generate-from-boq`,
+  INVOICE_TEMPLATES:      `${BASE}/Invoice/templates`,
+
   // AI Assistant (Ollama)
   AI_CHAT:         `${BASE}/AIAssistant/chat`,
   AI_QUICK_ADVICE: `${BASE}/AIAssistant/quickadvice`,

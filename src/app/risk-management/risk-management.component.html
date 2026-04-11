@@ -29,6 +29,8 @@
     <p>Select a project to view and manage its risks</p>
   </div>
 
+  <div *ngIf="statusMessage" class="status-banner" [ngClass]="statusType">{{ statusMessage }}</div>
+
   <div *ngIf="selectedProjectId" class="rm-body">
 
     <!-- ── KPI Cards ──────────────────────────────────────────────── -->

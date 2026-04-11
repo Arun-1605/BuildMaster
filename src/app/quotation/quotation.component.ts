@@ -6,6 +6,9 @@ import {
   CreateQuotationDto, SendQuotationDto, SubmitResponseDto, QuotationSupplierDto
 } from '../service/quotation.service';
 import { SupplierService, Supplier } from '../service/supplier.service';
+import { HttpClient } from '@angular/common/http';
+import { API_URLS } from '../core/constants';
+import { Router } from '@angular/router';
 
 type View = 'list' | 'create' | 'detail';
 
@@ -59,7 +62,9 @@ export class QuotationComponent implements OnInit {
   constructor(
     private qSvc: QuotationService,
     private sSvc: SupplierService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private http: HttpClient,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -304,6 +309,68 @@ export class QuotationComponent implements OnInit {
         setTimeout(() => this.success = '', 5000);
       },
       error: () => this.error = 'Failed to select supplier.'
+    });
+  }
+
+  // ── Send Invoice to Selected Supplier ────────────────────────────────────
+
+  sendInvoiceToSupplier(supplierId: number) {
+    if (!this.detail) return;
+
+    const selectedSupplier = this.detail.suppliers.find(s => s.supplierId === supplierId && s.isSelected);
+    if (!selectedSupplier || !selectedSupplier.response) {
+      this.error = 'No selected supplier with response found.';
+      return;
+    }
+
+    // Create invoice items from the supplier's quotation response
+    const invoiceItems = selectedSupplier.response.items.map(item => ({
+      description: `${item.materialName} (${item.offeredQuantity} ${item.unit})`,
+      quantity: item.offeredQuantity,
+      unit: item.unit,
+      unitPrice: item.offeredPrice,
+      totalPrice: item.totalAmount
+    }));
+
+    // Calculate totals
+    const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const taxRate = 18; // Default GST rate
+    const taxAmount = (subtotal * taxRate) / 100;
+    const totalAmount = subtotal + taxAmount;
+
+    const invoiceData = {
+      projectId: this.detail.projectId,
+      projectName: this.detail.projectName,
+      invoiceNumber: `INV-${this.detail.rfqNumber}-${supplierId}`,
+      invoiceDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      clientName: selectedSupplier.companyName,
+      clientEmail: selectedSupplier.email,
+      clientPhone: selectedSupplier.whatsAppNumber || '',
+      clientAddress: this.detail.deliveryAddress || '',
+      items: invoiceItems,
+      subtotal: subtotal,
+      taxRate: taxRate,
+      taxAmount: taxAmount,
+      discount: 0,
+      totalAmount: totalAmount,
+      notes: `Invoice generated from RFQ ${this.detail.rfqNumber}. Payment terms: ${selectedSupplier.response.paymentTerms || 'As agreed'}. Delivery terms: ${selectedSupplier.response.deliveryTerms || 'As agreed'}.`,
+      status: 'Draft'
+    };
+
+    this.http.post(API_URLS.INVOICES, invoiceData).subscribe({
+      next: (createdInvoice: any) => {
+        this.success = `Invoice ${createdInvoice.invoiceNumber} created successfully for ${selectedSupplier.companyName}!`;
+        // Optionally navigate to invoice page
+        setTimeout(() => {
+          if (confirm('Invoice created! Would you like to view and edit it now?')) {
+            this.router.navigate(['/invoice']);
+          }
+        }, 1000);
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to create invoice.';
+      }
     });
   }
 

@@ -1,0 +1,305 @@
+<div class="invoice-container">
+
+  <!-- ── Header ───────────────────────────────────────────────────────────── -->
+  <div class="invoice-header">
+    <div>
+      <h1>📄 Invoice Management</h1>
+      <p>Create and manage professional invoices for your construction projects</p>
+    </div>
+    <div class="header-controls">
+      <select [(ngModel)]="selectedProjectId" (ngModelChange)="loadCostEstimates()" class="project-select">
+        <option [value]="null">-- Select Project --</option>
+        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+      </select>
+      <button class="btn-ai" (click)="openBoqGenerator()" [disabled]="!selectedProjectId">
+        📋 Generate from BOQ
+      </button>
+      <button class="btn-primary" (click)="openAdd()">+ New Invoice</button>
+      <button class="btn-secondary" (click)="exportCSV()" *ngIf="invoices.length > 0">⬇️ Export CSV</button>
+    </div>
+  </div>
+
+  <div *ngIf="statusMessage" class="status-banner" [ngClass]="statusType">{{ statusMessage }}</div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="tab-bar">
+    <button class="tab" [class.active]="activeTab==='invoices'" (click)="activeTab='invoices'">📄 Invoices</button>
+    <button class="tab" [class.active]="activeTab==='templates'" (click)="activeTab='templates'">🎨 Templates</button>
+  </div>
+
+  <!-- ── Invoices Tab ─────────────────────────────────────────────────────── -->
+  <div *ngIf="activeTab === 'invoices'" class="tab-content">
+
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="loading">Loading invoices...</div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && invoices.length === 0" class="empty-state">
+      <div class="empty-icon">📄</div>
+      <p>No invoices found. Create your first invoice to get started.</p>
+    </div>
+
+    <!-- Invoices List -->
+    <div *ngIf="!isLoading && invoices.length > 0" class="invoices-grid">
+      <div *ngFor="let inv of invoices" class="invoice-card" [class]="inv.status.toLowerCase()">
+        <div class="card-header">
+          <div class="invoice-number">{{ inv.invoiceNumber }}</div>
+          <div class="status-badge" [class]="inv.status.toLowerCase()">{{ inv.status }}</div>
+        </div>
+        <div class="card-body">
+          <div class="client-info">
+            <strong>{{ inv.clientName }}</strong>
+            <div class="project-name">{{ inv.projectName }}</div>
+          </div>
+          <div class="invoice-details">
+            <div class="detail-row">
+              <span>Date:</span>
+              <span>{{ inv.invoiceDate | date:'shortDate' }}</span>
+            </div>
+            <div class="detail-row">
+              <span>Due:</span>
+              <span>{{ inv.dueDate | date:'shortDate' }}</span>
+            </div>
+            <div class="detail-row">
+              <span>Amount:</span>
+              <span class="amount">₹{{ inv.totalAmount | number:'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm" (click)="printInvoice(inv)">🖨️ Print</button>
+          <button class="btn-sm" (click)="editInvoice(inv)">✏️ Edit</button>
+          <button class="btn-sm danger" (click)="deleteInvoice(inv.id!)">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Templates Tab ────────────────────────────────────────────────────── -->
+  <div *ngIf="activeTab === 'templates'" class="tab-content">
+    <div class="templates-header">
+      <h3>Invoice Templates</h3>
+      <button class="btn-primary" (click)="openTemplateCreator()">+ Create Template</button>
+    </div>
+
+    <div class="templates-grid">
+      <div class="template-card">
+        <div class="template-header">
+          <h4>Default Template</h4>
+          <span class="default-badge">Default</span>
+        </div>
+        <p>Professional invoice template with company branding and itemized billing.</p>
+        <div class="template-actions">
+          <button class="btn-sm" (click)="openTemplateCreator()">📝 Customize</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Invoice Form Modal ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+  <div class="modal invoice-modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingId ? 'Edit' : 'Create' }} Invoice</h3>
+
+    <div class="form-grid">
+      <!-- Basic Info -->
+      <div class="form-section">
+        <h4>Invoice Details</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Invoice Number *</label>
+            <input [(ngModel)]="form.invoiceNumber" placeholder="Auto-generated if empty">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="form.status">
+              <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Invoice Date *</label>
+            <input type="date" [(ngModel)]="form.invoiceDate">
+          </div>
+          <div class="form-group">
+            <label>Due Date *</label>
+            <input type="date" [(ngModel)]="form.dueDate">
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Info -->
+      <div class="form-section">
+        <h4>Client Information</h4>
+        <div class="form-group">
+          <label>Client Name *</label>
+          <input [(ngModel)]="form.clientName" placeholder="Enter client name">
+        </div>
+        <div class="form-group">
+          <label>Client Address</label>
+          <textarea [(ngModel)]="form.clientAddress" rows="2" placeholder="Enter client address"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client Email</label>
+            <input type="email" [(ngModel)]="form.clientEmail" placeholder="client@example.com">
+          </div>
+          <div class="form-group">
+            <label>Client Phone</label>
+            <input [(ngModel)]="form.clientPhone" placeholder="Enter phone number">
+          </div>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="form-section">
+        <h4>Invoice Items</h4>
+        <div class="items-header">
+          <button class="btn-sm" (click)="addItem()">+ Add Item</button>
+        </div>
+
+        <div *ngFor="let item of form.items; let i = index" class="item-row">
+          <div class="item-fields">
+            <input [(ngModel)]="item.description" placeholder="Description" class="desc-input">
+            <input type="number" [(ngModel)]="item.quantity" (ngModelChange)="onItemChange()" placeholder="Qty" step="0.01">
+            <select [(ngModel)]="item.unit">
+              <option *ngFor="let u of units" [value]="u">{{ u }}</option>
+            </select>
+            <input type="number" [(ngModel)]="item.unitPrice" (ngModelChange)="onItemChange()" placeholder="Rate" step="0.01">
+            <span class="item-total">₹{{ item.totalPrice | number:'1.0-0' }}</span>
+            <button class="btn-icon danger" (click)="removeItem(i)">×</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="form-section">
+        <h4>Totals</h4>
+        <div class="totals-grid">
+          <div class="total-row">
+            <span>Subtotal:</span>
+            <span>₹{{ form.subtotal | number:'1.0-0' }}</span>
+          </div>
+          <div class="total-row">
+            <label>Tax Rate (%):</label>
+            <input type="number" [(ngModel)]="form.taxRate" (ngModelChange)="calculateTotals()" step="0.01">
+          </div>
+          <div class="total-row">
+            <span>Tax Amount:</span>
+            <span>₹{{ form.taxAmount | number:'1.0-0' }}</span>
+          </div>
+          <div class="total-row">
+            <label>Discount:</label>
+            <input type="number" [(ngModel)]="form.discount" (ngModelChange)="calculateTotals()" step="0.01">
+          </div>
+          <div class="total-row final">
+            <span>Total Amount:</span>
+            <span>₹{{ form.totalAmount | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="form-section">
+        <h4>Additional Notes</h4>
+        <textarea [(ngModel)]="form.notes" rows="3" placeholder="Payment terms, notes, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveInvoice()">{{ editingId ? 'Update' : 'Create' }} Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BOQ Selector Modal ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showBoqSelector" (click)="showBoqSelector=false">
+  <div class="modal boq-modal" (click)="$event.stopPropagation()">
+    <h3>Select BOQ Items for Invoice</h3>
+
+    <div *ngIf="costEstimates.length === 0" class="empty-state">
+      <p>No BOQ items found for this project. Create cost estimates first.</p>
+    </div>
+
+    <div *ngIf="costEstimates.length > 0" class="boq-items">
+      <div *ngFor="let item of costEstimates" class="boq-item">
+        <label class="checkbox-label">
+          <input type="checkbox"
+                 [value]="item.id"
+                 [(ngModel)]="selectedBoqItems"
+                 [checked]="selectedBoqItems.includes(item.id)">
+          <span class="checkmark"></span>
+          <div class="item-info">
+            <div class="item-name">{{ item.itemName }}</div>
+            <div class="item-details">{{ item.quantity }} {{ item.unit }} × ₹{{ item.unitPrice }} = ₹{{ item.totalCost }}</div>
+            <div class="item-category">{{ item.category }}</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showBoqSelector=false">Cancel</button>
+      <button class="btn-primary" (click)="generateFromBoq()" [disabled]="selectedBoqItems.length === 0">
+        Generate Invoice ({{ selectedBoqItems.length }} items)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Template Creator Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showTemplateForm" (click)="showTemplateForm=false">
+  <div class="modal template-modal" (click)="$event.stopPropagation()">
+    <h3>{{ editingTemplateId ? 'Edit' : 'Create' }} Invoice Template</h3>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Template Name *</label>
+        <input [(ngModel)]="templateForm.name" placeholder="e.g., Professional Construction Invoice">
+      </div>
+
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="templateForm.description" rows="2" placeholder="Brief description of the template"></textarea>
+      </div>
+
+      <div class="form-group full">
+        <label>HTML Template</label>
+        <textarea [(ngModel)]="templateForm.templateHtml" rows="15" placeholder="HTML template with placeholders like clientName"></textarea>
+        <small>Use propertyName for dynamic content. Use *ngFor for item loops.</small>
+      </div>
+
+      <div class="form-section">
+        <h4>Placeholders
+          <button class="btn-sm" (click)="addPlaceholder()">+ Add</button>
+        </h4>
+
+        <div *ngFor="let ph of templateForm.placeholders; let i = index" class="placeholder-row">
+          <input [(ngModel)]="ph.key" placeholder="Key (e.g., clientName)" class="key-input">
+          <input [(ngModel)]="ph.label" placeholder="Label (e.g., Client Name)" class="label-input">
+          <select [(ngModel)]="ph.type">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="date">Date</option>
+            <option value="textarea">Textarea</option>
+          </select>
+          <input [(ngModel)]="ph.defaultValue" placeholder="Default value" class="default-input">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="ph.required">
+            Required
+          </label>
+          <button class="btn-icon danger" (click)="removePlaceholder(i)">×</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="showTemplateForm=false">Cancel</button>
+      <button class="btn-primary" (click)="saveTemplate()">{{ editingTemplateId ? 'Update' : 'Create' }} Template</button>
+    </div>
+  </div>
+</div>
