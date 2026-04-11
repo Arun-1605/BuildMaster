@@ -11,23 +11,23 @@
     </button>
 
     <ul class="navbar-links" [class.open]="isMobileMenuOpen">
-      <li><a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a></li>
+      <li><a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" (click)="closeMobileMenu()">Home</a></li>
 
       <ng-container *ngIf="isLoggedIn">
-        <li><a routerLink="/projects" routerLinkActive="active">📋 Projects</a></li>
-        <li><a routerLink="/floor-plan" routerLinkActive="active">📐 Plans</a></li>
-        <li><a routerLink="/supplier-master" routerLinkActive="active">🏭 Suppliers</a></li>
-        <li><a routerLink="/material-price-master" routerLinkActive="active">📦 Materials</a></li>
-        <li><a routerLink="/quotation" routerLinkActive="active">📨 Quotations</a></li>
-        <li><a routerLink="/risk-management" routerLinkActive="active">⚠️ Risk</a></li>
-        <li><a routerLink="/cost-estimation" routerLinkActive="active">💰 Estimation</a></li>
-        <li><a routerLink="/ai-assistant" routerLinkActive="active">🤖 AI</a></li>
-        <li *ngIf="isOwner"><a routerLink="/admin" routerLinkActive="active" class="admin-link">⚙️ Admin</a></li>
+        <li><a routerLink="/projects" routerLinkActive="active" (click)="closeMobileMenu()">📋 Projects</a></li>
+        <li><a routerLink="/floor-plan" routerLinkActive="active" (click)="closeMobileMenu()">📐 Plans</a></li>
+        <li><a routerLink="/supplier-master" routerLinkActive="active" (click)="closeMobileMenu()">🏭 Suppliers</a></li>
+        <li><a routerLink="/material-price-master" routerLinkActive="active" (click)="closeMobileMenu()">📦 Materials</a></li>
+        <li><a routerLink="/quotation" routerLinkActive="active" (click)="closeMobileMenu()">📨 Quotations</a></li>
+        <li><a routerLink="/risk-management" routerLinkActive="active" (click)="closeMobileMenu()">⚠️ Risk</a></li>
+        <li><a routerLink="/cost-estimation" routerLinkActive="active" (click)="closeMobileMenu()">💰 Estimation</a></li>
+        <li><a routerLink="/ai-assistant" routerLinkActive="active" (click)="closeMobileMenu()">🤖 AI</a></li>
+        <li *ngIf="isOwner"><a routerLink="/admin" routerLinkActive="active" class="admin-link" (click)="closeMobileMenu()">⚙️ Admin</a></li>
         <li>
-          <a *ngIf="isPremium" routerLink="/subscription" class="tier-badge premium" title="Premium Active">
+          <a *ngIf="isPremium" routerLink="/subscription" class="tier-badge premium" title="Premium Active" (click)="closeMobileMenu()">
             ⭐ Premium
           </a>
-          <a *ngIf="!isPremium && !isOwner" routerLink="/subscription" class="tier-badge free" title="Upgrade to Premium">
+          <a *ngIf="!isPremium && !isOwner" routerLink="/subscription" class="tier-badge free" title="Upgrade to Premium" (click)="closeMobileMenu()">
             🔓 Upgrade
           </a>
         </li>
@@ -54,14 +54,14 @@
           </div>
         </li>
         <li>
-          <button class="logout-btn" (click)="logout()">Logout</button>
+          <button class="logout-btn" (click)="logout(); closeMobileMenu()">Logout</button>
         </li>
       </ng-container>
 
       <ng-container *ngIf="!isLoggedIn">
-        <li><a routerLink="/supplier-portal" routerLinkActive="active" class="supplier-portal-link">Supplier Portal</a></li>
+        <li><a routerLink="/supplier-portal" routerLinkActive="active" class="supplier-portal-link" (click)="closeMobileMenu()">Supplier Portal</a></li>
         <li><a href="javascript:void(0)" (click)="openContactForm()" class="contact-link">Contact</a></li>
-        <li><a routerLink="/login" class="login-btn">Login</a></li>
+        <li><a routerLink="/login" class="login-btn" (click)="closeMobileMenu()">Login</a></li>
       </ng-container>
     </ul>
   </div>

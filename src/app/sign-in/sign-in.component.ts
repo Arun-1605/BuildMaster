@@ -81,6 +81,7 @@ export class SignInComponent implements OnInit {
 
   // ── Send OTP ────────────────────────────────────────────────────────────────
   sendOtp(): void {
+    if (!this.otpRequired) return; // OTP not required
     const phone = this.signInForm.get('phone')?.value?.trim();
     if (!phone) { this.otpError = 'Enter a phone number first.'; return; }
     if (this.phoneExists)  { this.otpError = 'This phone is already registered.'; return; }

@@ -79,7 +79,8 @@
             (blur)="onPhoneBlur()"
           />
           <button type="button" class="btn otp-btn" (click)="sendOtp()"
-                  [disabled]="sendingOtp || phoneExists || !signInForm.get('phone')?.value">
+                  [disabled]="sendingOtp || phoneExists || !signInForm.get('phone')?.value"
+                  *ngIf="otpRequired">
             {{ otpSent ? 'Resend OTP' : 'Send OTP' }}
           </button>
         </div>

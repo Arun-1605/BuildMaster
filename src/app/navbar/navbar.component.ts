@@ -16,6 +16,7 @@ import { API_URLS } from '../core/constants';
 export class NavbarComponent implements OnInit, OnDestroy {
   isMobileMenuOpen = false;
   showContactForm  = false;
+  subscriptionEnabled = false;
 
   // Notifications
   unreadCount   = 0;
@@ -29,7 +30,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   get isLoggedIn(): boolean  { return this.authService.isAuthenticated(); }
   get isOwner(): boolean     { return this.authService.isOwner(); }
-  get isPremium(): boolean   { return this.authService.isPremium(); }
+  get isPremium(): boolean   { return this.subscriptionEnabled && this.authService.isPremium(); }
   get subscriptionTier(): string { return this.authService.getSubscriptionTier(); }
 
   ngOnInit(): void {
@@ -39,6 +40,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
         if (this.isLoggedIn) this.fetchUnreadCount();
       }, 30000);
     }
+    // Fetch subscription settings
+    this.http.get<any>(API_URLS.PAYMENT_PLANS).subscribe({
+      next: (data) => this.subscriptionEnabled = data.subscriptionEnabled,
+      error: () => this.subscriptionEnabled = false
+    });
   }
 
   ngOnDestroy(): void {
@@ -96,6 +102,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   toggleMobileMenu(): void { this.isMobileMenuOpen = !this.isMobileMenuOpen; }
+  closeMobileMenu(): void { this.isMobileMenuOpen = false; }
   openContactForm(): void  { this.showContactForm = true; }
   closeContactForm(): void { this.showContactForm = false; }
 
