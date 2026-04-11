@@ -4,7 +4,7 @@
       <a routerLink="/" class="brand-name">🏗️ BuildMaster</a>
     </div>
 
-    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
+    <button class="mobile-menu-toggle" (click)="toggleMobileMenu(); $event.stopPropagation()">
       <span class="hamburger-icon" [class.open]="isMobileMenuOpen">
         <span></span><span></span><span></span>
       </span>

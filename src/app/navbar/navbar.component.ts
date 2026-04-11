@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -26,7 +26,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private pollInterval: any;
 
-  constructor(private router: Router, private authService: AuthService, private http: HttpClient) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private http: HttpClient,
+    private elRef: ElementRef
+  ) {}
 
   get isLoggedIn(): boolean  { return this.authService.isAuthenticated(); }
   get isOwner(): boolean     { return this.authService.isOwner(); }
@@ -102,9 +107,24 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   toggleMobileMenu(): void { this.isMobileMenuOpen = !this.isMobileMenuOpen; }
-  closeMobileMenu(): void { this.isMobileMenuOpen = false; }
-  openContactForm(): void  { this.showContactForm = true; }
+  closeMobileMenu(): void  { this.isMobileMenuOpen = false; }
+  openContactForm(): void  { this.showContactForm = true; this.isMobileMenuOpen = false; }
   closeContactForm(): void { this.showContactForm = false; }
+
+  /** Close mobile menu when user clicks anywhere outside the navbar. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.isMobileMenuOpen && !this.elRef.nativeElement.contains(event.target)) {
+      this.isMobileMenuOpen = false;
+    }
+  }
+
+  /** Close mobile menu and bell dropdown on Escape key. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.isMobileMenuOpen = false;
+    this.showBellMenu     = false;
+  }
 
   logout(): void {
     this.authService.logout();

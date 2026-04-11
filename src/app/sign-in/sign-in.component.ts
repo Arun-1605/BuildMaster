@@ -19,7 +19,7 @@ export class SignInComponent implements OnInit {
   successMsg   = '';
 
   // OTP flow state
-  otpRequired  = true;   // loaded from backend config
+  otpRequired  = false;  // hidden by default; shown only when backend confirms it is required
   step: 'form' | 'otp' = 'form';
   otpCode      = '';
   otpSent      = false;
@@ -50,8 +50,8 @@ export class SignInComponent implements OnInit {
   ngOnInit(): void {
     // Check if OTP is required (admin-configurable)
     this.http.get<any>(API_URLS.OTP_CONFIG).subscribe({
-      next:  (r) => this.otpRequired = r.required,
-      error: ()  => this.otpRequired = true   // default to required on error
+      next:  (r) => this.otpRequired = !!r.required,
+      error: ()  => this.otpRequired = false  // config unavailable: match admin intent (disabled)
     });
   }
 

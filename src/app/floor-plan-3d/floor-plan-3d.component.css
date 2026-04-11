@@ -315,6 +315,15 @@
 }
 .move-btns button:hover { border-color: #f7c948; color: #f7c948; }
 
+.action-btns { display: flex; gap: 4px; align-items: center; }
+
+.rot-room {
+  background: #1e3a5f40; border: 1px solid #1e3a5f; color: #93c5fd;
+  border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: 1rem;
+  transition: all 0.15s;
+}
+.rot-room:hover { background: #1e3a5f; }
+
 .del-room {
   background: #7f1d1d30; border: 1px solid #7f1d1d; color: #f87171;
   border-radius: 4px; padding: 3px 8px; cursor: pointer;

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../auth.service';
+import { SubscriptionStateService } from '../subscription-state.service';
 import { environment } from '../../environments/environment';
 
 const ADMIN_BASE = `${environment.apiBaseUrl}/Admin`;
@@ -34,7 +35,11 @@ export class AdminPanelComponent implements OnInit {
   saveMsg    = '';
   saveError  = '';
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(
+    private http: HttpClient,
+    private auth: AuthService,
+    private subState: SubscriptionStateService
+  ) {}
 
   ngOnInit(): void {
     this.loadSettings();
@@ -76,7 +81,11 @@ export class AdminPanelComponent implements OnInit {
     this.saveMsg = ''; this.saveError = '';
     this.http.put(`${ADMIN_BASE}/subscription/toggle`,
       { value: this.subscriptionEnabled }, { headers: this.headers() }).subscribe({
-      next: () => { this.saveMsg = 'Subscription setting saved.'; setTimeout(() => this.saveMsg = '', 3000); },
+      next: () => {
+        this.subState.invalidate();
+        this.saveMsg = 'Subscription setting saved.';
+        setTimeout(() => this.saveMsg = '', 3000);
+      },
       error: () => { this.saveError = 'Failed to save.'; }
     });
   }
@@ -85,7 +94,11 @@ export class AdminPanelComponent implements OnInit {
     this.saveMsg = ''; this.saveError = '';
     this.http.put(`${ADMIN_BASE}/subscription/free-tier`,
       { value: this.freeTierForAll }, { headers: this.headers() }).subscribe({
-      next: () => { this.saveMsg = 'Free tier setting saved.'; setTimeout(() => this.saveMsg = '', 3000); },
+      next: () => {
+        this.subState.invalidate();
+        this.saveMsg = 'Free tier setting saved.';
+        setTimeout(() => this.saveMsg = '', 3000);
+      },
       error: () => { this.saveError = 'Failed to save.'; }
     });
   }

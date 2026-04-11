@@ -370,7 +370,8 @@
                     <button (click)="moveRoom(room, 0.3, 0)"  title="East">→</button>
                   </div>
                 </td>
-                <td>
+                <td class="action-btns">
+                  <button class="rot-room" (click)="rotateRoom(room)" title="Rotate 90°">↺</button>
                   <button class="del-room" (click)="removeRoom(room.id)" title="Remove">✕</button>
                 </td>
               </tr>

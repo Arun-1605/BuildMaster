@@ -23,6 +23,7 @@ interface Room {
   x: number;       // placed position on canvas grid
   y: number;
   color: string;
+  rotated?: boolean; // for Staircase: when true steps run E-W instead of N-S
 }
 
 interface ColumnItem {
@@ -375,6 +376,13 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
   removeRoom(id: number) {
     this.currentFloor.rooms = this.currentFloor.rooms.filter(r => r.id !== id);
     this.draw2D();
+  }
+
+  /** Rotate any room 90°: swaps width ↔ depth and toggles the rotated flag (used for Staircase direction). */
+  rotateRoom(room: Room) {
+    [room.width, room.depth] = [room.depth, room.width];
+    room.rotated = !room.rotated;
+    this.updateRoom(room);
   }
 
   updateRoom(room: Room) {
@@ -799,38 +807,93 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
       const isDragged = this.dragRoom?.id === room.id;
       const isHovered = !isDragged && this.hoveredRoomId === room.id;
 
-      // Drop-shadow for dragged room
+      // ── AutoCAD-style double-line walls ──────────────────────────
+      const WT_PX = Math.max(4, Math.min(8, S * 0.22)); // wall thickness in pixels (~5.5 px at 25px/m)
+
+      // Shadow for dragged room
       if (isDragged) {
-        ctx.shadowColor   = 'rgba(0,0,0,0.45)';
-        ctx.shadowBlur    = 14;
-        ctx.shadowOffsetX = 4;
-        ctx.shadowOffsetY = 4;
+        ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 14;
+        ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 4;
       }
 
-      // Fill
-      ctx.fillStyle = room.color + (isDragged ? 'cc' : 'bb');
+      // 1. Wall area — dark fill behind hatch
+      ctx.fillStyle = '#1a2030';
       ctx.fillRect(rx, ry, rw, rh);
 
-      // Reset shadow
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur  = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
+      // 2. Diagonal cross-hatch clipped to wall strip (outer rect minus interior rect — even-odd rule)
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx, ry, rw, rh);                                             // outer boundary
+      ctx.rect(rx + WT_PX, ry + WT_PX, rw - 2 * WT_PX, rh - 2 * WT_PX); // inner boundary
+      ctx.clip('evenodd');
+      ctx.strokeStyle = 'rgba(80,105,148,0.9)'; ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      for (let d = -(rh + 4); d < rw + rh + 4; d += 5) {
+        ctx.moveTo(rx + d, ry); ctx.lineTo(rx + d + rh, ry + rh);
+      }
+      ctx.stroke();
+      ctx.restore();
 
-      // Border / walls
+      // Reset shadow
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+      // 3. Room interior fill (over hatch)
+      ctx.fillStyle = room.color + (isDragged ? 'cc' : 'aa');
+      ctx.fillRect(rx + WT_PX, ry + WT_PX, rw - 2 * WT_PX, rh - 2 * WT_PX);
+
+      // 4. Outer wall line — heavy architectural weight
       if (isDragged) {
-        ctx.setLineDash([6, 3]);
-        ctx.strokeStyle = '#f7c948';
-        ctx.lineWidth   = 2.5;
+        ctx.setLineDash([6, 3]); ctx.strokeStyle = '#f7c948'; ctx.lineWidth = 2.5;
       } else if (isHovered) {
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth   = 2.5;
+        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2.5;
       } else {
-        ctx.strokeStyle = '#0f1117';
-        ctx.lineWidth   = 2;
+        ctx.strokeStyle = '#0f1117'; ctx.lineWidth = 2;
       }
       ctx.strokeRect(rx, ry, rw, rh);
       ctx.setLineDash([]);
+
+      // 5. Inner wall line — medium weight (inner face of wall)
+      if (rw > WT_PX * 2 + 6 && rh > WT_PX * 2 + 6) {
+        ctx.strokeStyle = 'rgba(15,17,23,0.55)'; ctx.lineWidth = 0.8;
+        ctx.strokeRect(rx + WT_PX, ry + WT_PX, rw - 2 * WT_PX, rh - 2 * WT_PX);
+      }
+
+      // 6. AutoCAD-style dimension ticks for rooms ≥ 50 px wide / tall
+      if (!isDragged && rw >= 50 && rh >= 50) {
+        ctx.save();
+        const ac = '#4a90c4';
+        ctx.strokeStyle = ac; ctx.fillStyle = ac; ctx.lineWidth = 0.7;
+        ctx.font = '7px monospace'; ctx.textAlign = 'center';
+
+        // Width dim below room
+        const dimY = ry + rh + 9;
+        ctx.beginPath();
+        ctx.moveTo(rx,      ry + rh + 2); ctx.lineTo(rx,      dimY + 5);
+        ctx.moveTo(rx + rw, ry + rh + 2); ctx.lineTo(rx + rw, dimY + 5);
+        ctx.moveTo(rx + 4,  dimY); ctx.lineTo(rx + rw - 4, dimY);
+        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(rx,      dimY); ctx.lineTo(rx + 5,      dimY - 3); ctx.lineTo(rx + 5,      dimY + 3); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(rx + rw, dimY); ctx.lineTo(rx + rw - 5, dimY - 3); ctx.lineTo(rx + rw - 5, dimY + 3); ctx.closePath(); ctx.fill();
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${this.toD(room.width).toFixed(1)}${this.uL}`, rx + rw / 2, dimY + 2);
+
+        // Depth dim right of room
+        const dimX = rx + rw + 9;
+        ctx.beginPath();
+        ctx.moveTo(rx + rw + 2, ry);      ctx.lineTo(dimX + 5, ry);
+        ctx.moveTo(rx + rw + 2, ry + rh); ctx.lineTo(dimX + 5, ry + rh);
+        ctx.moveTo(dimX, ry + 4); ctx.lineTo(dimX, ry + rh - 4);
+        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(dimX, ry);      ctx.lineTo(dimX - 3, ry + 5);      ctx.lineTo(dimX + 3, ry + 5);      ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(dimX, ry + rh); ctx.lineTo(dimX - 3, ry + rh - 5); ctx.lineTo(dimX + 3, ry + rh - 5); ctx.closePath(); ctx.fill();
+        ctx.save();
+        ctx.translate(dimX + 3, ry + rh / 2); ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(`${this.toD(room.depth).toFixed(1)}${this.uL}`, 0, 0);
+        ctx.restore();
+
+        ctx.restore();
+      }
 
       // ── Furniture symbols ─────────────────────────────────────
       this.drawFurniture2D(ctx, room, rx, ry, rw, rh);
@@ -1142,6 +1205,49 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
       ctx.fillText(modeLabel[this.placeMode] ?? '', OX + this.site.plotWidth*S - 4, OY + 4);
     }
 
+    // ── North compass rose (top-left, inside plot border)
+    {
+      const ncX = OX + 18; const ncY = OY + 46;
+      ctx.save();
+      ctx.strokeStyle = '#f7c948'; ctx.fillStyle = '#f7c948'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(ncX, ncY, 13, 0, Math.PI * 2); ctx.stroke();
+      // North arrow (filled half)
+      ctx.beginPath(); ctx.moveTo(ncX, ncY - 12); ctx.lineTo(ncX + 4, ncY); ctx.lineTo(ncX - 4, ncY); ctx.closePath(); ctx.fill();
+      // South half (outline only)
+      ctx.beginPath(); ctx.moveTo(ncX, ncY + 12); ctx.lineTo(ncX + 4, ncY); ctx.lineTo(ncX - 4, ncY); ctx.closePath(); ctx.stroke();
+      // Cardinal ticks
+      [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dx2, dy2]) => {
+        ctx.beginPath();
+        ctx.moveTo(ncX + dx2 * 9, ncY + dy2 * 9);
+        ctx.lineTo(ncX + dx2 * 13, ncY + dy2 * 13);
+        ctx.stroke();
+      });
+      ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('N', ncX, ncY - 19);
+      ctx.restore();
+    }
+
+    // ── Scale bar (bottom, right of plot)
+    {
+      const barM   = Math.min(5, Math.round(this.site.plotWidth / 3)); // represents N metres
+      const barLen = barM * S;
+      const sbX    = OX + this.site.plotWidth * S - barLen - 4;
+      const sbY    = OY + this.site.plotDepth * S + 38;
+      ctx.save();
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1;
+      const segW = barLen / 2;
+      ctx.fillStyle = '#64748b'; ctx.fillRect(sbX, sbY - 5, segW, 5);
+      ctx.fillStyle = '#1a1f2e'; ctx.fillRect(sbX + segW, sbY - 5, segW, 5);
+      ctx.strokeRect(sbX, sbY - 5, barLen, 5);
+      ctx.fillStyle = '#94a3b8'; ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('0', sbX, sbY + 1);
+      ctx.fillText(`${this.toD(barM / 2).toFixed(1)}`, sbX + segW, sbY + 1);
+      ctx.fillText(`${this.toD(barM).toFixed(1)} ${this.uL}`, sbX + barLen, sbY + 1);
+      ctx.textAlign = 'right'; ctx.font = '7px monospace';
+      ctx.fillText('1:150 (screen)', sbX + barLen, sbY - 8);
+      ctx.restore();
+    }
+
     // ── Facing arrow
     ctx.fillStyle = '#f7c948';
     ctx.font      = 'bold 12px Arial';
@@ -1268,15 +1374,24 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
         break;
       }
       case 'Balcony': {
-        // Railing lines (parallel horizontal lines)
-        for (let n = 0; n < 3; n++) {
-          const ly = iy + ih * 0.15 + n * ih * 0.22;
-          ctx.beginPath(); ctx.moveTo(ix, ly); ctx.lineTo(ix + iw, ly); ctx.stroke();
+        // Railing (double line at bottom = glazed railing)
+        ctx.strokeRect(ix, iy + ih * 0.85, iw, ih * 0.12);
+        // Glass hatching in railing
+        ctx.save(); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 0.5;
+        for (let hx2 = ix; hx2 < ix + iw; hx2 += 5) {
+          ctx.beginPath(); ctx.moveTo(hx2, iy + ih * 0.85); ctx.lineTo(hx2, iy + ih * 0.97); ctx.stroke();
         }
-        // Potted plant (circle)
-        ctx.beginPath();
-        ctx.arc(ix + iw * 0.8, iy + ih * 0.5, Math.min(iw, ih) * 0.1, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.restore();
+        // Lounge chairs (2 rects)
+        if (iw > 40) {
+          const cw2 = iw * 0.28; const ch2 = ih * 0.5;
+          ctx.strokeRect(ix + iw * 0.1, iy + ih * 0.1, cw2, ch2);
+          ctx.strokeRect(ix + iw * 0.62, iy + ih * 0.1, cw2, ch2);
+          // Table (circle between chairs)
+          ctx.beginPath(); ctx.arc(ix + iw / 2, iy + ih * 0.36, Math.min(iw, ih) * 0.09, 0, Math.PI * 2); ctx.stroke();
+        }
+        // Potted plant (circle, corner)
+        ctx.beginPath(); ctx.arc(ix + iw * 0.88, iy + ih * 0.68, Math.min(iw, ih) * 0.09, 0, Math.PI * 2); ctx.stroke();
         break;
       }
       case 'Pooja Room': {
@@ -1337,92 +1452,101 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
         break;
       }
       case 'Lobby': {
-        // Reception desk arc
-        ctx.beginPath();
-        ctx.arc(ix + iw / 2, iy + ih * 0.7, Math.min(iw, ih) * 0.3, Math.PI, 0);
-        ctx.stroke();
-        ctx.strokeRect(ix + iw * 0.2, iy + ih * 0.7, iw * 0.6, ih * 0.08);
+        // Reception desk (L-shape)
+        const rdw = iw * 0.55; const rdh = ih * 0.25;
+        ctx.strokeRect(ix + (iw - rdw) / 2, iy + ih * 0.25, rdw, rdh);
+        ctx.strokeRect(ix + (iw - rdw) / 2 + rdw - rdh * 0.7, iy + ih * 0.25, rdh * 0.7, rdh * 1.4);
+        // Waiting chairs row
+        const chW2 = iw * 0.17; const chGap = iw * 0.04;
+        const nC = Math.min(3, Math.floor(iw / (chW2 + chGap)));
+        for (let n = 0; n < nC; n++) {
+          ctx.strokeRect(ix + n * (chW2 + chGap), iy + ih * 0.66, chW2, chW2);
+        }
+        // Potted plant
+        ctx.beginPath(); ctx.arc(ix + iw * 0.88, iy + ih * 0.18, Math.min(iw, ih) * 0.09, 0, Math.PI * 2); ctx.stroke();
         break;
       }
       case 'Staircase': {
-        // ── Architectural staircase symbol ──────────────────────────────────
-        const steps   = Math.max(5, Math.min(14, Math.floor(ih / 8)));
-        const stepH   = ih / steps;
-        const cutY    = iy + ih * 0.52;   // cut-plane at ~mid height
-        const arX     = ix + iw / 2;
+        // ── Architectural staircase symbol (supports N-S and E-W via room.rotated) ──
+        const isRotated = !!room.rotated;
 
-        // ── Handrail lines (both sides, full height) ─────────────────────
-        ctx.save();
-        ctx.strokeStyle = '#4a4a6a';
-        ctx.lineWidth   = 2;
-        ctx.beginPath(); ctx.moveTo(ix + 2,      iy); ctx.lineTo(ix + 2,      iy + ih); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(ix + iw - 2, iy); ctx.lineTo(ix + iw - 2, iy + ih); ctx.stroke();
-        ctx.restore();
+        if (!isRotated) {
+          // ── N-S orientation: treads are horizontal lines, UP arrow points north ──
+          const steps  = Math.max(5, Math.min(14, Math.floor(ih / 8)));
+          const stepH  = ih / steps;
+          const cutY   = iy + ih * 0.52;
+          const arX    = ix + iw / 2;
 
-        // ── Tread lines (solid below cut, dashed above) ──────────────────
-        for (let n = 0; n <= steps; n++) {
-          const ly = iy + ih - n * stepH;      // bottom-to-top
-          const aboveCut = ly < cutY;
-          ctx.save();
-          if (aboveCut) {
-            ctx.setLineDash([3, 3]);
-            ctx.strokeStyle = 'rgba(26,31,46,0.45)';
-            ctx.lineWidth   = 0.8;
-          } else {
-            ctx.setLineDash([]);
-            ctx.strokeStyle = '#1a1f2e';
-            ctx.lineWidth   = 1;
-          }
-          ctx.beginPath();
-          ctx.moveTo(ix + 4, ly);
-          ctx.lineTo(ix + iw - 4, ly);
-          ctx.stroke();
+          ctx.save(); ctx.strokeStyle = '#4a4a6a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(ix + 2,      iy); ctx.lineTo(ix + 2,      iy + ih); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(ix + iw - 2, iy); ctx.lineTo(ix + iw - 2, iy + ih); ctx.stroke();
           ctx.restore();
+
+          for (let n = 0; n <= steps; n++) {
+            const ly = iy + ih - n * stepH;
+            ctx.save();
+            if (ly < cutY) { ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(26,31,46,0.45)'; ctx.lineWidth = 0.8; }
+            else            { ctx.setLineDash([]);     ctx.strokeStyle = '#1a1f2e';              ctx.lineWidth = 1;   }
+            ctx.beginPath(); ctx.moveTo(ix + 4, ly); ctx.lineTo(ix + iw - 4, ly); ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.save(); ctx.strokeStyle = '#1a1f2e'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+          const bzStep = iw / 6;
+          ctx.beginPath(); ctx.moveTo(ix, cutY);
+          for (let z = 0; z < 6; z++) ctx.lineTo(ix + (z + 0.5) * bzStep, cutY + (z % 2 === 0 ? 5 : -5));
+          ctx.lineTo(ix + iw, cutY); ctx.stroke(); ctx.restore();
+
+          ctx.save(); ctx.strokeStyle = '#1a1f2e'; ctx.lineWidth = 1.5;
+          const arTip = iy + ih * 0.08; const arBase = cutY - stepH;
+          ctx.beginPath(); ctx.moveTo(arX, arBase); ctx.lineTo(arX, arTip);
+          ctx.lineTo(arX - iw * 0.09, arTip + ih * 0.07); ctx.moveTo(arX, arTip);
+          ctx.lineTo(arX + iw * 0.09, arTip + ih * 0.07); ctx.stroke();
+          const fs = Math.max(7, Math.min(11, iw * 0.14));
+          ctx.font = `bold ${fs}px sans-serif`; ctx.fillStyle = '#1a1f2e'; ctx.textAlign = 'center';
+          ctx.fillText('UP', arX, arBase + fs + 2);
+          ctx.font = `${Math.max(6, fs - 2)}px sans-serif`; ctx.fillStyle = 'rgba(26,31,46,0.6)';
+          ctx.fillText(`${steps} steps`, arX, iy + ih - 3); ctx.restore();
+
+        } else {
+          // ── E-W orientation: treads are vertical lines, UP arrow points east ──
+          const steps  = Math.max(5, Math.min(14, Math.floor(iw / 8)));
+          const stepW  = iw / steps;
+          const cutX   = ix + iw * 0.52;
+          const arY    = iy + ih / 2;
+
+          ctx.save(); ctx.strokeStyle = '#4a4a6a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(ix, iy + 2);      ctx.lineTo(ix + iw, iy + 2);      ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(ix, iy + ih - 2); ctx.lineTo(ix + iw, iy + ih - 2); ctx.stroke();
+          ctx.restore();
+
+          for (let n = 0; n <= steps; n++) {
+            const lx = ix + iw - n * stepW;
+            ctx.save();
+            if (lx > cutX) { ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(26,31,46,0.45)'; ctx.lineWidth = 0.8; }
+            else             { ctx.setLineDash([]);    ctx.strokeStyle = '#1a1f2e';              ctx.lineWidth = 1;   }
+            ctx.beginPath(); ctx.moveTo(lx, iy + 4); ctx.lineTo(lx, iy + ih - 4); ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.save(); ctx.strokeStyle = '#1a1f2e'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+          const bzStep = ih / 6;
+          ctx.beginPath(); ctx.moveTo(cutX, iy);
+          for (let z = 0; z < 6; z++) ctx.lineTo(cutX + (z % 2 === 0 ? 5 : -5), iy + (z + 0.5) * bzStep);
+          ctx.lineTo(cutX, iy + ih); ctx.stroke(); ctx.restore();
+
+          ctx.save(); ctx.strokeStyle = '#1a1f2e'; ctx.lineWidth = 1.5;
+          const arTip2 = ix + iw * 0.92; const arBase2 = cutX + stepW;
+          ctx.beginPath(); ctx.moveTo(arBase2, arY); ctx.lineTo(arTip2, arY);
+          ctx.lineTo(arTip2 - iw * 0.07, arY - ih * 0.09); ctx.moveTo(arTip2, arY);
+          ctx.lineTo(arTip2 - iw * 0.07, arY + ih * 0.09); ctx.stroke();
+          const fs2 = Math.max(7, Math.min(11, ih * 0.14));
+          ctx.font = `bold ${fs2}px sans-serif`; ctx.fillStyle = '#1a1f2e';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('UP', arBase2 - fs2 * 2.5, arY);
+          ctx.font = `${Math.max(6, fs2 - 2)}px sans-serif`; ctx.fillStyle = 'rgba(26,31,46,0.6)';
+          ctx.fillText(`${steps} steps`, ix + 20, arY); ctx.restore();
         }
-
-        // ── Break line (zigzag at the cut plane) ─────────────────────────
-        ctx.save();
-        ctx.strokeStyle = '#1a1f2e';
-        ctx.lineWidth   = 1.5;
-        ctx.setLineDash([]);
-        const bzAmp  = 5;
-        const nZigs  = 6;
-        const bzStep = iw / nZigs;
-        ctx.beginPath();
-        ctx.moveTo(ix, cutY);
-        for (let z = 0; z < nZigs; z++) {
-          const xp = ix + (z + 0.5) * bzStep;
-          ctx.lineTo(xp, cutY + (z % 2 === 0 ? bzAmp : -bzAmp));
-        }
-        ctx.lineTo(ix + iw, cutY);
-        ctx.stroke();
-        ctx.restore();
-
-        // ── Direction arrow + "UP" label ──────────────────────────────────
-        ctx.save();
-        ctx.strokeStyle = '#1a1f2e';
-        ctx.lineWidth   = 1.5;
-        const arTip  = iy + ih * 0.08;
-        const arBase = cutY - stepH;
-        ctx.beginPath();
-        ctx.moveTo(arX, arBase);
-        ctx.lineTo(arX, arTip);
-        ctx.lineTo(arX - iw * 0.09, arTip + ih * 0.07);
-        ctx.moveTo(arX, arTip);
-        ctx.lineTo(arX + iw * 0.09, arTip + ih * 0.07);
-        ctx.stroke();
-
-        const fs = Math.max(7, Math.min(11, iw * 0.14));
-        ctx.font      = `bold ${fs}px sans-serif`;
-        ctx.fillStyle = '#1a1f2e';
-        ctx.textAlign = 'center';
-        ctx.fillText('UP', arX, arBase + fs + 2);
-
-        // step count at bottom
-        ctx.font      = `${Math.max(6, fs - 2)}px sans-serif`;
-        ctx.fillStyle = 'rgba(26,31,46,0.6)';
-        ctx.fillText(`${steps} steps`, arX, iy + ih - 3);
-        ctx.restore();
         break;
       }
     }
@@ -1995,6 +2119,21 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
         // Bedside tables
         addBox(0.4, 0.55, 0.4, cx - 1.1, baseY + 0.275, cz - room.depth * 0.1, 0x8b6914);
         addBox(0.4, 0.55, 0.4, cx + 1.1, baseY + 0.275, cz - room.depth * 0.1, 0x8b6914);
+        // Wardrobe (against north wall)
+        addBox(Math.min(room.width * 0.55, 1.8), 2.1, 0.55, cx, floorY + 1.05, room.y + room.depth - 0.28, 0x5c3d1e);
+        // Ceiling fan (centre of room)
+        { const fY = floorY + _fh - 0.18;
+          addBox(0.18, 0.16, 0.18, cx, fY, cz, 0x4a5568);
+          addBox(0.55, 0.02, 0.12, cx - 0.3, fY - 0.06, cz, 0xc8b577);
+          addBox(0.55, 0.02, 0.12, cx + 0.3, fY - 0.06, cz, 0xc8b577);
+          addBox(0.12, 0.02, 0.55, cx, fY - 0.06, cz - 0.3, 0xc8b577);
+          addBox(0.12, 0.02, 0.55, cx, fY - 0.06, cz + 0.3, 0xc8b577);
+        }
+        // Wall-mounted AC (north wall, upper zone)
+        { const acY = floorY + _fh * 0.78;
+          addBox(0.85, 0.25, 0.2, cx, acY, room.y + room.depth - 0.1, 0xe2e8f0);
+          addBox(0.82, 0.04, 0.16, cx, acY - 0.14, room.y + room.depth - 0.14, 0x94a3b8);
+        }
         break;
       }
       case 'Bedroom': {
@@ -2004,6 +2143,19 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
         addBox(0.4, 0.1, 0.32, cx + 0.44, baseY + 0.3, cz - room.depth * 0.22, 0xffffff);
         addBox(0.35, 0.5, 0.35, cx - 0.95, baseY + 0.25, cz - room.depth * 0.1, 0x8b6914);
         addBox(0.35, 0.5, 0.35, cx + 0.95, baseY + 0.25, cz - room.depth * 0.1, 0x8b6914);
+        // Ceiling fan
+        { const fY = floorY + _fh - 0.18;
+          addBox(0.15, 0.14, 0.15, cx, fY, cz, 0x4a5568);
+          addBox(0.48, 0.02, 0.1, cx - 0.26, fY - 0.06, cz, 0xc8b577);
+          addBox(0.48, 0.02, 0.1, cx + 0.26, fY - 0.06, cz, 0xc8b577);
+          addBox(0.1, 0.02, 0.48, cx, fY - 0.06, cz - 0.26, 0xc8b577);
+          addBox(0.1, 0.02, 0.48, cx, fY - 0.06, cz + 0.26, 0xc8b577);
+        }
+        // AC unit on north wall
+        { const acY = floorY + _fh * 0.76;
+          addBox(0.75, 0.22, 0.18, cx, acY, room.y + room.depth - 0.09, 0xe2e8f0);
+          addBox(0.72, 0.03, 0.14, cx, acY - 0.12, room.y + room.depth - 0.13, 0x94a3b8);
+        }
         break;
       }
       case 'Living Room': {
@@ -2011,10 +2163,23 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
         addBox(1.8, 0.45, 0.7, cx, baseY + 0.225, cz + room.depth * 0.1, 0x6b7280);
         // Sofa backrest
         addBox(1.8, 0.5, 0.15, cx, baseY + 0.475, cz + room.depth * 0.1 + 0.42, 0x6b7280);
+        // Sofa side arm
+        addBox(0.15, 0.45, 0.7, cx - 1.0, baseY + 0.225, cz + room.depth * 0.1, 0x6b7280);
+        addBox(0.15, 0.45, 0.7, cx + 1.0, baseY + 0.225, cz + room.depth * 0.1, 0x6b7280);
         // Coffee table
         addBox(0.8, 0.4, 0.5, cx, baseY + 0.2, cz - room.depth * 0.15, 0x8b6914);
         // TV unit against north wall
         addBox(1.2, 0.8, 0.2, cx, baseY + 0.4, cz + room.depth * 0.35, 0x1a1f2e);
+        // TV screen (flat panel)
+        addBox(1.05, 0.6, 0.04, cx, baseY + 0.7, cz + room.depth * 0.35 + 0.12, 0x0a0a0f);
+        // Ceiling fan (centre of room)
+        { const fY = floorY + _fh - 0.18;
+          addBox(0.2, 0.18, 0.2, cx, fY, cz, 0x4a5568);
+          addBox(0.62, 0.02, 0.13, cx - 0.36, fY - 0.07, cz, 0xc8b577);
+          addBox(0.62, 0.02, 0.13, cx + 0.36, fY - 0.07, cz, 0xc8b577);
+          addBox(0.13, 0.02, 0.62, cx, fY - 0.07, cz - 0.36, 0xc8b577);
+          addBox(0.13, 0.02, 0.62, cx, fY - 0.07, cz + 0.36, 0xc8b577);
+        }
         break;
       }
       case 'Dining Room': {
@@ -2080,12 +2245,13 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
 
       case 'Staircase': {
         // ── Properly modelled staircase ─────────────────────────────────────
-        // Steps run from room.y (front/south) → room.y+depth (back/north)
-        // Rise goes  from floorY             → floorY+_fh
+        // N-S (default): steps run from room.y → room.y+depth, tread width = room.width
+        // E-W (rotated): steps run from room.x → room.x+width, tread width = room.depth
+        const isRotated3D = !!room.rotated;
         const STEP_COUNT  = Math.max(6, Math.round(_fh / 0.175));  // ~175 mm per step
-        const stepRise    = _fh / STEP_COUNT;                       // vertical per step
-        const stepRun     = room.depth / STEP_COUNT;                // horizontal per step
-        const stepW       = room.width * 0.86;                      // tread width (inset)
+        const stepRise    = _fh / STEP_COUNT;
+        const stepRun     = isRotated3D ? room.width  / STEP_COUNT : room.depth / STEP_COUNT;
+        const stepW       = isRotated3D ? room.depth  * 0.86       : room.width * 0.86;
         const TREAD_T     = 0.038;                                   // tread slab thickness
 
         const treadMat    = new THREE.MeshLambertMaterial({ color: 0xc8bfab });
@@ -2097,101 +2263,222 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // ── Treads, risers, nosings ───────────────────────────────────────
         for (let s = 0; s < STEP_COUNT; s++) {
-          // Top surface of tread s is at (s+1)*stepRise above floor
           const treadTopY = floorY + (s + 1) * stepRise;
-          const treadZ    = room.y + s * stepRun + stepRun / 2;
 
-          // Tread slab
-          const tread = new THREE.Mesh(
-            new THREE.BoxGeometry(stepW, TREAD_T, stepRun + 0.015),   // 15 mm overlap
-            treadMat
-          );
-          tread.position.set(cx, treadTopY - TREAD_T / 2, treadZ);
-          tread.castShadow = true; tread.receiveShadow = true;
-          this.scene.add(tread); floorMeshList.push(tread);
+          if (!isRotated3D) {
+            // N-S: vary Z, stepW along X
+            const treadZ = room.y + s * stepRun + stepRun / 2;
+            const tread = new THREE.Mesh(new THREE.BoxGeometry(stepW, TREAD_T, stepRun + 0.015), treadMat);
+            tread.position.set(cx, treadTopY - TREAD_T / 2, treadZ);
+            tread.castShadow = true; tread.receiveShadow = true;
+            this.scene.add(tread); floorMeshList.push(tread);
 
-          // Riser (vertical face at front edge of each tread)
-          const riser = new THREE.Mesh(
-            new THREE.BoxGeometry(stepW, stepRise, 0.022),
-            riserMat
-          );
-          riser.position.set(cx, floorY + s * stepRise + stepRise / 2, room.y + s * stepRun);
-          this.scene.add(riser); floorMeshList.push(riser);
+            const riser = new THREE.Mesh(new THREE.BoxGeometry(stepW, stepRise, 0.022), riserMat);
+            riser.position.set(cx, floorY + s * stepRise + stepRise / 2, room.y + s * stepRun);
+            this.scene.add(riser); floorMeshList.push(riser);
 
-          // Nosing highlight strip
-          const nose = new THREE.Mesh(
-            new THREE.BoxGeometry(stepW, 0.022, 0.042),
-            nosingMat
-          );
-          nose.position.set(cx, treadTopY, room.y + s * stepRun - 0.008);
-          this.scene.add(nose); floorMeshList.push(nose);
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(stepW, 0.022, 0.042), nosingMat);
+            nose.position.set(cx, treadTopY, room.y + s * stepRun - 0.008);
+            this.scene.add(nose); floorMeshList.push(nose);
+          } else {
+            // E-W: vary X, stepW along Z
+            const treadX = room.x + s * stepRun + stepRun / 2;
+            const tread = new THREE.Mesh(new THREE.BoxGeometry(stepRun + 0.015, TREAD_T, stepW), treadMat);
+            tread.position.set(treadX, treadTopY - TREAD_T / 2, cz);
+            tread.castShadow = true; tread.receiveShadow = true;
+            this.scene.add(tread); floorMeshList.push(tread);
+
+            const riser = new THREE.Mesh(new THREE.BoxGeometry(0.022, stepRise, stepW), riserMat);
+            riser.position.set(room.x + s * stepRun, floorY + s * stepRise + stepRise / 2, cz);
+            this.scene.add(riser); floorMeshList.push(riser);
+
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.022, stepW), nosingMat);
+            nose.position.set(room.x + s * stepRun - 0.008, treadTopY, cz);
+            this.scene.add(nose); floorMeshList.push(nose);
+          }
         }
 
-        // ── Sloped stringers (inclined side boards) ───────────────────────
-        const slantLen   = Math.sqrt(room.depth * room.depth + _fh * _fh);
-        const slantAngle = Math.atan2(_fh, room.depth);   // rotation about X axis
+        // ── Sloped stringers ──────────────────────────────────────────────
+        const slantLen   = isRotated3D
+          ? Math.sqrt(room.width * room.width + _fh * _fh)
+          : Math.sqrt(room.depth * room.depth + _fh * _fh);
+        const slantAngle = isRotated3D
+          ? Math.atan2(_fh, room.width)
+          : Math.atan2(_fh, room.depth);
         const strH       = 0.22;
 
         [-1, 1].forEach(side => {
-          const sx = cx + side * (stepW / 2 + 0.04);
           const stringer = new THREE.Mesh(
-            new THREE.BoxGeometry(0.06, strH, slantLen),
+            isRotated3D ? new THREE.BoxGeometry(slantLen, strH, 0.06)
+                        : new THREE.BoxGeometry(0.06, strH, slantLen),
             stringerMat
           );
-          stringer.position.set(sx, floorY + _fh / 2, room.y + room.depth / 2);
-          stringer.rotation.x = -slantAngle;
+          if (!isRotated3D) {
+            stringer.position.set(cx + side * (stepW / 2 + 0.04), floorY + _fh / 2, room.y + room.depth / 2);
+            stringer.rotation.x = -slantAngle;
+          } else {
+            stringer.position.set(room.x + room.width / 2, floorY + _fh / 2, cz + side * (stepW / 2 + 0.04));
+            stringer.rotation.z = slantAngle;
+          }
           this.scene.add(stringer); floorMeshList.push(stringer);
         });
 
-        // ── Handrail posts (vertical balusters every 2 steps) ─────────────
-        const postHeight = 0.9;    // standard 900 mm handrail height
-        const railOffX   = stepW / 2 - 0.06;
+        // ── Handrail posts ────────────────────────────────────────────────
+        const postHeight = 0.9;
+        const railOff    = stepW / 2 - 0.06;
 
         for (let s = 1; s < STEP_COUNT; s += 2) {
           const postBaseY = floorY + s * stepRise;
-          const postZ     = room.y + (s - 0.5) * stepRun;
           [-1, 1].forEach(side => {
-            const post = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.025, 0.025, postHeight, 6),
-              postMat
-            );
-            post.position.set(cx + side * railOffX, postBaseY + postHeight / 2, postZ);
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, postHeight, 6), postMat);
+            if (!isRotated3D) {
+              post.position.set(cx + side * railOff, postBaseY + postHeight / 2, room.y + (s - 0.5) * stepRun);
+            } else {
+              post.position.set(room.x + (s - 0.5) * stepRun, postBaseY + postHeight / 2, cz + side * railOff);
+            }
             this.scene.add(post); floorMeshList.push(post);
           });
         }
 
-        // ── Sloped continuous handrail on each side ───────────────────────
+        // ── Continuous handrail ───────────────────────────────────────────
         [-1, 1].forEach(side => {
           const rail = new THREE.Mesh(
-            new THREE.BoxGeometry(0.05, 0.05, slantLen),
+            isRotated3D ? new THREE.BoxGeometry(slantLen, 0.05, 0.05)
+                        : new THREE.BoxGeometry(0.05, 0.05, slantLen),
             railMat
           );
-          // Rail sits at handrail height above each step's tread
-          rail.position.set(
-            cx + side * railOffX,
-            floorY + _fh / 2 + postHeight,
-            room.y + room.depth / 2
-          );
-          rail.rotation.x = -slantAngle;
+          if (!isRotated3D) {
+            rail.position.set(cx + side * railOff, floorY + _fh / 2 + postHeight, room.y + room.depth / 2);
+            rail.rotation.x = -slantAngle;
+          } else {
+            rail.position.set(room.x + room.width / 2, floorY + _fh / 2 + postHeight, cz + side * railOff);
+            rail.rotation.z = slantAngle;
+          }
           this.scene.add(rail); floorMeshList.push(rail);
         });
 
-        // ── Newel posts (square pillars at bottom and top of flight) ──────
+        // ── Newel posts ───────────────────────────────────────────────────
         const newelH = postHeight + 0.18;
-        [
-          { baseY: floorY,       z: room.y },
-          { baseY: floorY + _fh, z: room.y + room.depth }
-        ].forEach(({ baseY, z }) => {
+        const newelEnds = isRotated3D
+          ? [{ baseY: floorY, xPos: room.x }, { baseY: floorY + _fh, xPos: room.x + room.width }]
+          : [{ baseY: floorY, zPos: room.y }, { baseY: floorY + _fh, zPos: room.y + room.depth }];
+
+        newelEnds.forEach((end: any) => {
           [-1, 1].forEach(side => {
-            const newel = new THREE.Mesh(
-              new THREE.BoxGeometry(0.09, newelH, 0.09),
-              postMat
-            );
-            newel.position.set(cx + side * railOffX, baseY + newelH / 2, z);
+            const newel = new THREE.Mesh(new THREE.BoxGeometry(0.09, newelH, 0.09), postMat);
+            if (!isRotated3D) {
+              newel.position.set(cx + side * railOff, end.baseY + newelH / 2, end.zPos);
+            } else {
+              newel.position.set(end.xPos, end.baseY + newelH / 2, cz + side * railOff);
+            }
             this.scene.add(newel); floorMeshList.push(newel);
           });
         });
 
+        break;
+      }
+
+      case 'Balcony': {
+        // ── Balcony: glass railing + outdoor lounge chairs + table ─────────
+        const railH = 1.05; // standard balcony railing height
+        const postM = new THREE.MeshLambertMaterial({ color: 0x9ca3af });
+        const glassRailM = new THREE.MeshLambertMaterial({ color: 0x88ccee, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
+        const numPosts = Math.max(2, Math.floor(room.width / 0.6));
+        // Vertical posts along south edge
+        for (let n = 0; n <= numPosts; n++) {
+          const px = room.x + (room.width / numPosts) * n;
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, railH, 6), postM);
+          post.position.set(px, floorY + railH / 2, room.y + 0.09);
+          this.scene.add(post); floorMeshList.push(post);
+        }
+        // Glass railing panel
+        const gPanel = new THREE.Mesh(new THREE.BoxGeometry(room.width, railH * 0.82, 0.018), glassRailM);
+        gPanel.position.set(cx, floorY + railH * 0.52, room.y + 0.09);
+        this.scene.add(gPanel); floorMeshList.push(gPanel);
+        // Top handrail
+        const topRailMesh = new THREE.Mesh(new THREE.BoxGeometry(room.width + 0.06, 0.05, 0.09), postM);
+        topRailMesh.position.set(cx, floorY + railH + 0.025, room.y + 0.09);
+        this.scene.add(topRailMesh); floorMeshList.push(topRailMesh);
+        // Outdoor lounge chairs (if wide enough)
+        if (room.width >= 1.8) {
+          const nChairs = Math.min(2, Math.floor(room.width / 0.75));
+          for (let n = 0; n < nChairs; n++) {
+            const chX = cx + (n === 0 ? -0.45 : 0.45) * (room.width < 2 ? 0.6 : 1);
+            addBox(0.52, 0.35, 0.48, chX, baseY + 0.175, cz - 0.08, 0x5c4a3a);    // seat
+            addBox(0.52, 0.42, 0.08, chX, baseY + 0.42,  cz - 0.28, 0x5c4a3a);   // backrest
+            addBox(0.48, 0.05, 0.44, chX, baseY + 0.37,  cz - 0.08, 0x4a90e2);   // cushion
+          }
+          // Small side table between chairs
+          addCylinder(0.16, 0.52, cx, baseY + 0.26, cz - 0.08, 0x9ca3af, 10);
+          const tabletopMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 10), new THREE.MeshLambertMaterial({ color: 0xc8bfb0 }));
+          tabletopMesh.position.set(cx, floorY + 0.52 + 0.2 + 0.015, cz - 0.08);
+          this.scene.add(tabletopMesh); floorMeshList.push(tabletopMesh);
+        }
+        // Potted plants at corners
+        addCylinder(0.14, 0.3, room.x + 0.2, baseY + 0.15, cz + room.depth * 0.25, 0x6b4f30, 8);
+        const plant1 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshLambertMaterial({ color: 0x2d7a3a }));
+        plant1.position.set(room.x + 0.2, floorY + 0.3 + 0.2 + 0.2, cz + room.depth * 0.25);
+        this.scene.add(plant1); floorMeshList.push(plant1);
+        break;
+      }
+
+      case 'Store Room': {
+        // ── Store Room: floor-to-ceiling shelving units ─────────────────────
+        const shelfBoardM = new THREE.MeshLambertMaterial({ color: 0xc8b577 });
+        const boxHeights  = [0.2, 0.15, 0.18, 0.13, 0.22, 0.16]; // deterministic box heights
+        const shelfCount  = 4;
+        const shelfGap    = (_fh - 0.25) / shelfCount;
+        const shelfD      = 0.35;
+        // Vertical support posts
+        addBox(0.06, _fh - 0.1, 0.06, room.x + 0.12,              floorY + (_fh - 0.1) / 2, room.y + shelfD + 0.04, 0x8b6914);
+        addBox(0.06, _fh - 0.1, 0.06, room.x + room.width - 0.12, floorY + (_fh - 0.1) / 2, room.y + shelfD + 0.04, 0x8b6914);
+        for (let s = 0; s < shelfCount; s++) {
+          const shY = floorY + 0.25 + s * shelfGap;
+          // Shelf board
+          const board = new THREE.Mesh(new THREE.BoxGeometry(room.width - 0.24, 0.04, shelfD), shelfBoardM);
+          board.position.set(cx, shY, room.y + shelfD / 2 + 0.06);
+          this.scene.add(board); floorMeshList.push(board);
+          // Storage items on shelf
+          const itemCnt = Math.max(2, Math.floor((room.width - 0.3) / 0.35));
+          for (let n = 0; n < itemCnt; n++) {
+            const bx2 = room.x + 0.18 + n * (room.width - 0.36) / itemCnt + 0.1;
+            const bh2 = boxHeights[n % boxHeights.length];
+            addBox(0.2, bh2, 0.28, bx2, shY + 0.02 + bh2 / 2, room.y + 0.09 + shelfD / 2, n % 2 === 0 ? 0x4a5568 : 0x374151);
+          }
+        }
+        break;
+      }
+
+      case 'Lobby': {
+        // ── Lobby: reception desk + waiting seats + plants ──────────────────
+        const deskW   = Math.min(room.width * 0.58, 2.2);
+        const deskH   = 1.1;
+        const deskD   = 0.58;
+        const deskCX  = cx - room.width * 0.06;
+        const deskCZ  = room.y + room.depth * 0.32;
+        // Main counter body
+        addBox(deskW, deskH, deskD, deskCX, floorY + deskH / 2, deskCZ, 0x374151);
+        // Counter top panel
+        addBox(deskW + 0.12, 0.06, deskD + 0.14, deskCX, floorY + deskH + 0.03, deskCZ, 0x64748b);
+        // L-shape wing
+        addBox(0.55, deskH, deskW * 0.42, deskCX + deskW / 2 + 0.275, floorY + deskH / 2,
+               deskCZ - deskW * 0.21 + deskD / 2, 0x374151);
+        addBox(0.55 + 0.12, 0.06, deskW * 0.42 + 0.12, deskCX + deskW / 2 + 0.275,
+               floorY + deskH + 0.03, deskCZ - deskW * 0.21 + deskD / 2, 0x64748b);
+        // Monitor on desk
+        addBox(0.45, 0.32, 0.04, deskCX - 0.2, floorY + deskH + 0.22, deskCZ - deskD / 2 + 0.04, 0x0f1117);
+        // Waiting chairs along back wall
+        const chairCnt = Math.min(4, Math.max(1, Math.floor(room.width / 0.65)));
+        for (let n = 0; n < chairCnt; n++) {
+          const chX = room.x + 0.35 + n * (room.width - 0.5) / chairCnt;
+          addBox(0.48, 0.42, 0.48, chX, baseY + 0.21, room.y + room.depth * 0.74, 0x2d3748);
+          addBox(0.48, 0.44, 0.08, chX, baseY + 0.42, room.y + room.depth * 0.74 + 0.22, 0x2d3748);
+        }
+        // Potted plants at corners
+        addCylinder(0.18, 0.35, room.x + 0.28, baseY + 0.175, room.y + 0.28, 0x6b4f30, 8);
+        const lPlant = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), new THREE.MeshLambertMaterial({ color: 0x2d7a3a }));
+        lPlant.position.set(room.x + 0.28, floorY + 0.35 + 0.2 + 0.25, room.y + 0.28);
+        this.scene.add(lPlant); floorMeshList.push(lPlant);
         break;
       }
     }
@@ -2255,6 +2542,75 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
       stone.position.set(gateX, 0.02, (n + 0.5) * (drivewayLen / 4));
       this.scene.add(stone);
     }
+
+    // ── Compound boundary wall ────────────────────────────────────
+    const cmpH  = 1.8;  // 1.8 m wall height (standard compound wall)
+    const cmpT  = 0.18; // 180 mm wall thickness
+    const cmpM  = mat(0xd4ccc0);
+    const capM  = mat(0x8c7e6e);
+    const pw    = this.site.plotWidth;
+    const pd    = this.site.plotDepth;
+    const cmpY  = cmpH / 2;
+
+    // South wall — split into left & right segments with gate gap (2.4 m)
+    const gateHalf = 1.2;
+    const leftW  = gateX - gateHalf;
+    const rightW = pw - gateX - gateHalf;
+    if (leftW > 0) {
+      const lw = new THREE.Mesh(new THREE.BoxGeometry(leftW, cmpH, cmpT), cmpM);
+      lw.position.set(leftW / 2, cmpY, 0);
+      lw.castShadow = true; this.scene.add(lw);
+      const lwCap = new THREE.Mesh(new THREE.BoxGeometry(leftW + 0.02, 0.1, cmpT + 0.06), capM);
+      lwCap.position.set(leftW / 2, cmpH + 0.05, 0); this.scene.add(lwCap);
+    }
+    if (rightW > 0) {
+      const rw2 = new THREE.Mesh(new THREE.BoxGeometry(rightW, cmpH, cmpT), cmpM);
+      rw2.position.set(gateX + gateHalf + rightW / 2, cmpY, 0);
+      rw2.castShadow = true; this.scene.add(rw2);
+      const rwCap = new THREE.Mesh(new THREE.BoxGeometry(rightW + 0.02, 0.1, cmpT + 0.06), capM);
+      rwCap.position.set(gateX + gateHalf + rightW / 2, cmpH + 0.05, 0); this.scene.add(rwCap);
+    }
+    // North wall
+    const nWallM2 = new THREE.Mesh(new THREE.BoxGeometry(pw, cmpH, cmpT), cmpM);
+    nWallM2.position.set(pw / 2, cmpY, pd);
+    nWallM2.castShadow = true; this.scene.add(nWallM2);
+    const nWallCap = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.02, 0.1, cmpT + 0.06), capM);
+    nWallCap.position.set(pw / 2, cmpH + 0.05, pd); this.scene.add(nWallCap);
+    // West wall
+    const wWallM2 = new THREE.Mesh(new THREE.BoxGeometry(cmpT, cmpH, pd), cmpM);
+    wWallM2.position.set(0, cmpY, pd / 2);
+    wWallM2.castShadow = true; this.scene.add(wWallM2);
+    const wWallCap = new THREE.Mesh(new THREE.BoxGeometry(cmpT + 0.06, 0.1, pd + 0.02), capM);
+    wWallCap.position.set(0, cmpH + 0.05, pd / 2); this.scene.add(wWallCap);
+    // East wall
+    const eWallM2 = new THREE.Mesh(new THREE.BoxGeometry(cmpT, cmpH, pd), cmpM);
+    eWallM2.position.set(pw, cmpY, pd / 2);
+    eWallM2.castShadow = true; this.scene.add(eWallM2);
+    const eWallCap = new THREE.Mesh(new THREE.BoxGeometry(cmpT + 0.06, 0.1, pd + 0.02), capM);
+    eWallCap.position.set(pw, cmpH + 0.05, pd / 2); this.scene.add(eWallCap);
+
+    // Corner pillars (4 corners + gate pillars)
+    const pillarPositions = [
+      [0, 0], [pw, 0], [0, pd], [pw, pd],
+      [gateX - gateHalf, 0], [gateX + gateHalf, 0]  // gate pillars
+    ];
+    pillarPositions.forEach(([px2, pz2]) => {
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.28, cmpH + 0.3, 0.28), cmpM);
+      pillar.position.set(px2, (cmpH + 0.3) / 2, pz2);
+      pillar.castShadow = true; this.scene.add(pillar);
+      const pillarCap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34), capM);
+      pillarCap.position.set(px2, cmpH + 0.3 + 0.06, pz2); this.scene.add(pillarCap);
+    });
+
+    // Gate panel with decorative horizontal bars
+    const gatePanel = new THREE.Mesh(new THREE.BoxGeometry(gateHalf * 2, 1.6, 0.04), mat(0x8b6914));
+    gatePanel.position.set(gateX, 0.8, 0.0);
+    this.scene.add(gatePanel);
+    for (let row = 1; row <= 4; row++) {
+      const hBar = new THREE.Mesh(new THREE.BoxGeometry(gateHalf * 2 + 0.06, 0.06, 0.06), mat(0xf7c948));
+      hBar.position.set(gateX, row * 0.32, 0.0);
+      this.scene.add(hBar);
+    }
   }
 
   private build3DFloors() {
@@ -2269,7 +2625,7 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
     const WT     = 0.22;  // wall thickness metres
     const WALL_CLR  = 0xf2ede4;  // off-white exterior plaster
     const WALL_MAT  = new THREE.MeshLambertMaterial({ color: WALL_CLR });
-    const GLASS_MAT = new THREE.MeshLambertMaterial({ color: 0xa8d4f5, transparent: true, opacity: 0.55 });
+    const GLASS_MAT = new THREE.MeshLambertMaterial({ color: 0x88ccee, transparent: true, opacity: 0.22, side: THREE.DoubleSide });
     const FRAME_MAT = new THREE.MeshLambertMaterial({ color: 0xd4ccc0 });
     const DOOR_MAT  = new THREE.MeshLambertMaterial({ color: 0x8b6914 });
     const SLAB_MAT  = new THREE.MeshLambertMaterial({ color: 0xbfb8ab });
@@ -2313,6 +2669,30 @@ export class FloorPlan3DComponent implements OnInit, AfterViewInit, OnDestroy {
 
           // 3D Furniture
           this.addFurniture3D(room, floorY, fh, floorMeshList);
+
+          // ── Interior wall paint planes (room colour on inside faces) ──────
+          const iWallMat = new THREE.MeshLambertMaterial({
+            color: hex, transparent: true, opacity: 0.55, side: THREE.DoubleSide
+          });
+          const wallH    = fh - 0.22; // full storey minus slab
+          const midWallY = floorY + 0.2 + wallH / 2;
+          const iWT      = WT + 0.01;  // slightly inside the structural wall
+          // South interior wall
+          const swm = new THREE.Mesh(new THREE.PlaneGeometry(room.width - iWT * 2, wallH), iWallMat);
+          swm.position.set(room.x + room.width / 2, midWallY, room.y + iWT / 2);
+          swm.rotation.y = 0; this.scene.add(swm); floorMeshList.push(swm);
+          // North interior wall
+          const nwm = new THREE.Mesh(new THREE.PlaneGeometry(room.width - iWT * 2, wallH), iWallMat);
+          nwm.position.set(room.x + room.width / 2, midWallY, room.y + room.depth - iWT / 2);
+          nwm.rotation.y = Math.PI; this.scene.add(nwm); floorMeshList.push(nwm);
+          // West interior wall
+          const wwm = new THREE.Mesh(new THREE.PlaneGeometry(room.depth - iWT * 2, wallH), iWallMat);
+          wwm.position.set(room.x + iWT / 2, midWallY, room.y + room.depth / 2);
+          wwm.rotation.y = Math.PI / 2; this.scene.add(wwm); floorMeshList.push(wwm);
+          // East interior wall
+          const ewm = new THREE.Mesh(new THREE.PlaneGeometry(room.depth - iWT * 2, wallH), iWallMat);
+          ewm.position.set(room.x + room.width - iWT / 2, midWallY, room.y + room.depth / 2);
+          ewm.rotation.y = -Math.PI / 2; this.scene.add(ewm); floorMeshList.push(ewm);
         }
       }
 

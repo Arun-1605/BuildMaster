@@ -14,7 +14,7 @@
 
   <div class="pm-body">
     <!-- Projects List -->
-    <div class="projects-panel">
+    <div class="projects-panel" [class.form-open]="showProjectForm">
       <h3>Projects ({{ projects.length }})</h3>
       <div *ngIf="isLoading" class="loading">Loading...</div>
       <div *ngIf="!isLoading && projects.length === 0" class="empty-state">
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Project Detail -->
-    <div class="project-detail" *ngIf="selectedProject">
+    <div class="project-detail" *ngIf="selectedProject && !showProjectForm">
       <div class="detail-header">
         <div>
           <h2>{{ selectedProject.name }}</h2>
@@ -207,72 +207,77 @@
       </div>
     </div>
 
-    <div class="no-selection" *ngIf="!selectedProject">
-      <div class="no-sel-icon">🏗️</div>
-      <p>Select a project to view details and manage phases</p>
-    </div>
-  </div>
-</div>
+    <!-- Inline Project Form (replaces detail panel when creating/editing) -->
+    <div class="inline-form-panel" *ngIf="showProjectForm">
+      <div class="inline-form-header">
+        <h2>{{ editingProjectId ? '✏️ Edit Project' : '➕ New Project' }}</h2>
+        <button class="btn-icon-close" (click)="showProjectForm=false" title="Cancel">✕</button>
+      </div>
 
-<!-- Project Form Modal -->
-<div *ngIf="showProjectForm" style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 10001;">Modal should be open</div>
-<div class="modal-overlay" *ngIf="showProjectForm" (click)="showProjectForm=false">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <h3>{{ editingProjectId ? 'Edit' : 'Create' }} Project</h3>
-    <div class="form-grid">
-      <div class="form-group full">
-        <label>Project Name *</label>
-        <input [(ngModel)]="projectForm.name" placeholder="e.g. Green Valley Residence">
+      <div *ngIf="errorMsg" class="form-error-bar">⚠️ {{ errorMsg }}</div>
+
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Project Name *</label>
+          <input [(ngModel)]="projectForm.name" placeholder="e.g. Green Valley Residence">
+        </div>
+        <div class="form-group full">
+          <label>Description</label>
+          <textarea [(ngModel)]="projectForm.description" rows="2" placeholder="Brief project description"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Client Name</label>
+          <input [(ngModel)]="projectForm.clientName" placeholder="Client full name">
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input [(ngModel)]="projectForm.location" placeholder="City, State">
+        </div>
+        <div class="form-group">
+          <label>Project Type</label>
+          <select [(ngModel)]="projectForm.projectType">
+            <option *ngFor="let t of projectTypes" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="projectForm.status">
+            <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="projectForm.startDate">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="projectForm.endDate">
+        </div>
+        <div class="form-group">
+          <label>Budget (₹)</label>
+          <input type="number" [(ngModel)]="projectForm.budget" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Total Area (sqft)</label>
+          <input type="number" [(ngModel)]="projectForm.totalArea" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Floors</label>
+          <input type="number" [(ngModel)]="projectForm.floors" min="1" placeholder="1">
+        </div>
       </div>
-      <div class="form-group full">
-        <label>Description</label>
-        <textarea [(ngModel)]="projectForm.description" rows="2" placeholder="Brief project description"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Client Name</label>
-        <input [(ngModel)]="projectForm.clientName" placeholder="Client full name">
-      </div>
-      <div class="form-group">
-        <label>Location</label>
-        <input [(ngModel)]="projectForm.location" placeholder="City, State">
-      </div>
-      <div class="form-group">
-        <label>Project Type</label>
-        <select [(ngModel)]="projectForm.projectType">
-          <option *ngFor="let t of projectTypes" [value]="t">{{ t }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Status</label>
-        <select [(ngModel)]="projectForm.status">
-          <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Start Date</label>
-        <input type="date" [(ngModel)]="projectForm.startDate">
-      </div>
-      <div class="form-group">
-        <label>End Date</label>
-        <input type="date" [(ngModel)]="projectForm.endDate">
-      </div>
-      <div class="form-group">
-        <label>Budget (₹)</label>
-        <input type="number" [(ngModel)]="projectForm.budget" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label>Total Area (sqft)</label>
-        <input type="number" [(ngModel)]="projectForm.totalArea" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label>Floors</label>
-        <input type="number" [(ngModel)]="projectForm.floors" min="1" placeholder="1">
+
+      <div class="inline-form-actions">
+        <button class="btn-secondary" (click)="showProjectForm=false">Cancel</button>
+        <button class="btn-primary" (click)="saveProject()" [disabled]="isSaving">
+          {{ isSaving ? 'Saving…' : (editingProjectId ? 'Update Project' : 'Create Project') }}
+        </button>
       </div>
     </div>
-    <div *ngIf="errorMsg" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;padding:8px 12px;border-radius:6px;margin-top:12px;font-size:0.85rem;">{{ errorMsg }}</div>
-    <div class="modal-actions">
-      <button class="btn-secondary" (click)="showProjectForm=false">Cancel</button>
-      <button class="btn-primary" (click)="saveProject()" [disabled]="isSaving">{{ isSaving ? 'Saving...' : (editingProjectId ? 'Update' : 'Create') + ' Project' }}</button>
+
+    <div class="no-selection" *ngIf="!selectedProject && !showProjectForm">
+      <div class="no-sel-icon">🏗️</div>
+      <p>Select a project to view details, or click <strong>+ New Project</strong> to create one</p>
     </div>
   </div>
 </div>

@@ -67,6 +67,11 @@ export class SubscriptionComponent implements OnInit {
     const plan = this.plans.find(p => p.id === this.selectedPlanId);
     if (!plan) return;
 
+    if (!environment.razorpayKeyId) {
+      this.error = 'Payment gateway is not configured. Please contact support.';
+      return;
+    }
+
     this.paying = true;
     this.error  = '';
 

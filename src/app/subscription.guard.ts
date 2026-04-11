@@ -1,18 +1,18 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
-import { API_URLS } from './core/constants';
-import { catchError, map, of } from 'rxjs';
+import { SubscriptionStateService } from './subscription-state.service';
+import { map } from 'rxjs';
 
 /**
- * Blocks route access when the backend returns 402 (subscription required).
- * Falls back to allowing access when the payment endpoint is unreachable.
+ * Blocks route access for Free-tier users when subscriptions are required.
+ * Uses SubscriptionStateService so the interceptor can also read the cached
+ * result without making a duplicate HTTP call.
  */
 export const subscriptionGuard: CanActivateFn = () => {
-  const auth   = inject(AuthService);
-  const router = inject(Router);
-  const http   = inject(HttpClient);
+  const auth     = inject(AuthService);
+  const router   = inject(Router);
+  const subState = inject(SubscriptionStateService);
 
   if (!auth.isAuthenticated()) {
     router.navigate(['/login']);
@@ -22,22 +22,19 @@ export const subscriptionGuard: CanActivateFn = () => {
   // Owner bypasses subscription check
   if (auth.isOwner()) return true;
 
-  // Quick local check using JWT claims stored in user object
+  // If already premium (local claim), allow through
   const user = auth.getCurrentUser();
-  const tier = user?.subscriptionTier ?? 'Free';
-
-  // If already premium locally, allow through (server will re-validate on actual API call)
+  const tier = user?.subscriptionTier ?? user?.SubscriptionTier ?? 'Free';
   if (tier !== 'Free') return true;
 
-  // Check live subscription status from backend
-  return http.get<any>(API_URLS.PAYMENT_PLANS).pipe(
-    map(data => {
-      // If subscription not enabled or free tier for all, allow through
-      if (!data.subscriptionEnabled || data.freeTierForAll) return true;
-      // Free tier user with subscription enabled → redirect to subscription page
+  // Fetch (or replay cached) subscription settings from backend
+  return subState.fetch().pipe(
+    map(settings => {
+      // Allow if subscription feature is off OR admin enabled free-for-all
+      if (!settings.subscriptionEnabled || settings.freeTierForAll) return true;
+      // Free-tier user with active subscription wall → send to upgrade page
       router.navigate(['/subscription']);
       return false;
-    }),
-    catchError(() => of(true)) // Network error → allow through (fail open)
+    })
   );
 };
